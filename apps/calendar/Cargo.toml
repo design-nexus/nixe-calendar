@@ -16,11 +16,13 @@ anyhow = "1.0.104"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 glib = "0.22"
 gtk = { version = "0.11", package = "gtk4", features = ["v4_18"] }
-nixe-accounts = { git = "file:///home/ken/Projects/nixe-core", rev = "d292643f683b8970b0291b66363fd8c1e9bb7631" }
+nixe-accounts = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }
 nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
-nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "d292643f683b8970b0291b66363fd8c1e9bb7631" }
-nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "d292643f683b8970b0291b66363fd8c1e9bb7631" }
+nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }
+nixe-when = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }
 nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
 pangocairo = "0.22"
 nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"

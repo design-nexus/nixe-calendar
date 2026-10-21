@@ -1,26 +1,24 @@
 //! The EDS worker. One thread owns the source registry, the open calendars and
 //! their live views, and runs its own GLib main context so EDS signals arrive
 //! there. The window asks for things with the functions below and gets plain
-//! data back through `window::apply` on the GTK thread.
+//! data back on the GTK thread.
 
-use chrono::{Duration, NaiveDate};
+use chrono::NaiveDate;
 use nixe_calendar_core::{CalendarInfo, Event, midnight};
 use nixe_eds::{Calendar, Kind, Registry, View, Watch, range_query};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
-/// What the worker tells the window.
+/// What the worker tells the window on its own.
 #[derive(Debug)]
 pub enum Update {
     /// EDS can't be reached; the text says why.
     Unavailable(String),
     Calendars(Vec<CalendarInfo>),
-    Events { week: NaiveDate, events: Vec<Event>, problems: Vec<String> },
-    /// Something went wrong that doesn't change what is shown.
-    Problems(Vec<String>),
-    /// A refresh the user asked for has finished.
-    Refreshed,
+    /// The user's own addresses, for finding them among attendees.
+    Identities(Vec<String>),
+    Events { from: NaiveDate, to: NaiveDate, events: Vec<Event>, problems: Vec<String> },
 }
 
 #[derive(Default)]
@@ -30,9 +28,9 @@ struct State {
     accounts: Option<nixe_accounts::Client>,
     open: HashMap<String, Calendar>,
     views: Vec<View>,
-    /// The week and calendars the views watch.
-    watching: Option<(NaiveDate, Vec<String>)>,
-    week: Option<NaiveDate>,
+    /// The range and calendars the views watch.
+    watching: Option<(NaiveDate, NaiveDate, Vec<String>)>,
+    range: Option<(NaiveDate, NaiveDate)>,
     sent: Vec<CalendarInfo>,
 }
 
@@ -61,39 +59,72 @@ pub fn start() {
         .expect("start the calendar worker");
 }
 
-/// Shows the week starting on `week`.
-pub fn show_week(week: NaiveDate) {
+/// Shows the days `from` up to (not including) `to`.
+pub fn show_range(from: NaiveDate, to: NaiveDate) {
     run(move || {
-        STATE.with(|s| s.borrow_mut().week = Some(week));
+        STATE.with(|s| s.borrow_mut().range = Some((from, to)));
         load_events();
     });
+}
+
+/// Runs `work` on the worker and hands its result to `reply` on the GTK thread.
+pub fn ask<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, reply: impl FnOnce(T) + 'static) {
+    let reply = glib::thread_guard::ThreadGuard::new(reply);
+    run(move || {
+        let value = work();
+        glib::MainContext::default().invoke(move || (reply.into_inner())(value));
+    });
+}
+
+/// Runs `f` with an open calendar (opening it if needed). For use inside [`ask`].
+pub fn with_calendar<T>(uid: &str, f: impl FnOnce(&Calendar) -> Result<T, nixe_eds::Error>) -> Result<T, String> {
+    STATE.with(|s| {
+        let mut s = s.borrow_mut();
+        let state = &mut *s;
+        let Some(registry) = &state.registry else { return Err("Calendar data isn't available.".to_string()) };
+        if !state.open.contains_key(uid) {
+            let cal = Calendar::open(registry, uid, Kind::Calendar, None).map_err(|e| e.to_string())?;
+            state.open.insert(uid.to_string(), cal);
+        }
+        f(&state.open[uid]).map_err(|e| e.to_string())
+    })
+}
+
+/// Every occurrence in every shown calendar between two dates. For use inside [`ask`].
+pub fn events_between(from: NaiveDate, to: NaiveDate) -> Vec<Event> {
+    let shown: Vec<String> = STATE.with(|s| s.borrow().sent.iter().filter(|c| c.selected).map(|c| c.uid.clone()).collect());
+    let (a, b) = (midnight(from), midnight(to));
+    let mut out = Vec::new();
+    for uid in shown {
+        if let Ok(items) = with_calendar(&uid, |cal| Ok(cal.instances(a, b))) {
+            out.extend(items.iter().filter_map(|item| Event::from_item(&uid, item)));
+        }
+    }
+    out.sort_by_key(|e| e.sort_key());
+    out
 }
 
 /// Shows or hides a calendar (saved by EDS, so other calendar apps agree).
 pub fn set_selected(uid: String, selected: bool) {
     run(move || {
-        let result = STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.set_selected(&uid, Kind::Calendar, selected)));
-        if let Some(Err(err)) = result {
-            send(Update::Problems(vec![err.to_string()]));
-        }
+        let _ = STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.set_selected(&uid, Kind::Calendar, selected)));
         schedule_sources();
     });
 }
 
-/// Asks every open calendar to sync with its server now.
-pub fn refresh() {
-    run(|| {
-        let problems: Vec<String> = STATE.with(|s| {
-            let s = s.borrow();
-            s.open.iter().filter_map(|(uid, cal)| cal.refresh().err().map(|e| format!("{}: {e}", name_of(&s, uid)))).collect()
-        });
-        if problems.is_empty() {
-            send(Update::Refreshed);
-        } else {
-            send(Update::Problems(problems));
-        }
-        schedule_sources();
-    });
+/// Asks every open calendar to sync with its server now; replies with problems.
+pub fn refresh(reply: impl FnOnce(Vec<String>) + 'static) {
+    ask(
+        || {
+            let problems = STATE.with(|s| {
+                let s = s.borrow();
+                s.open.iter().filter_map(|(uid, cal)| cal.refresh().err().map(|e| format!("{}: {e}", name_of(&s, uid)))).collect()
+            });
+            schedule_sources();
+            problems
+        },
+        reply,
+    );
 }
 
 fn run(f: impl FnOnce() + Send + 'static) {
@@ -133,6 +164,7 @@ fn connect() {
                 s.accounts = accounts;
             });
             send_calendars(true);
+            send_identities();
             load_events();
             poll_online();
         }
@@ -147,6 +179,30 @@ fn connect() {
             after(std::time::Duration::from_secs(10), connect);
         }
     }
+}
+
+/// The user's addresses: every online account's identity, and the From
+/// address of its mail settings.
+fn send_identities() {
+    let mut me: Vec<String> = Vec::new();
+    STATE.with(|s| {
+        let s = s.borrow();
+        let Some(client) = &s.accounts else { return };
+        for account in client.list().unwrap_or_default() {
+            for candidate in [account.identity.clone(), account.presentation.clone()] {
+                if candidate.contains('@') && !me.iter().any(|m| m.eq_ignore_ascii_case(&candidate)) {
+                    me.push(candidate);
+                }
+            }
+            if let Ok(Some(mail)) = client.mail_settings(&account)
+                && mail.address.contains('@')
+                && !me.iter().any(|m| m.eq_ignore_ascii_case(&mail.address))
+            {
+                me.push(mail.address);
+            }
+        }
+    });
+    send(Update::Identities(me));
 }
 
 /// Re-sends the calendars when one goes online or offline.
@@ -164,6 +220,7 @@ fn schedule_sources() {
     after(std::time::Duration::from_millis(250), || {
         PENDING_SOURCES.with(|p| p.set(false));
         send_calendars(true);
+        send_identities();
         load_events();
     });
 }
@@ -182,7 +239,7 @@ fn name_of(state: &State, uid: &str) -> String {
     state.sent.iter().find(|c| c.uid == uid).map(|c| c.name.clone()).unwrap_or_else(|| uid.to_string())
 }
 
-fn calendars(state: &State) -> Vec<CalendarInfo> {
+fn calendar_list(state: &State) -> Vec<CalendarInfo> {
     let Some(registry) = &state.registry else { return Vec::new() };
     let attention: HashSet<String> = state
         .accounts
@@ -193,22 +250,26 @@ fn calendars(state: &State) -> Vec<CalendarInfo> {
     registry
         .sources(Kind::Calendar)
         .into_iter()
-        .map(|s| CalendarInfo {
-            name: s.label().to_string(),
-            needs_sign_in: s.account.as_ref().is_some_and(|a| attention.contains(a)),
-            offline: state.open.get(&s.uid).is_some_and(|c| !c.online()),
-            uid: s.uid,
-            color: s.color,
-            selected: s.selected,
-            group: s.group,
-            account: s.account,
+        .map(|s| {
+            let open = state.open.get(&s.uid);
+            CalendarInfo {
+                name: s.label().to_string(),
+                needs_sign_in: s.account.as_ref().is_some_and(|a| attention.contains(a)),
+                offline: open.is_some_and(|c| !c.online()),
+                read_only: open.is_some_and(|c| c.read_only()) || s.backend == "contacts",
+                uid: s.uid,
+                color: s.color,
+                selected: s.selected,
+                group: s.group,
+                account: s.account,
+            }
         })
         .collect()
 }
 
-/// Sends the calendar list, unless `only_changes` and nothing changed.
+/// Sends the calendar list, unless nothing changed and `always` is false.
 fn send_calendars(always: bool) {
-    let list = STATE.with(|s| calendars(&s.borrow()));
+    let list = STATE.with(|s| calendar_list(&s.borrow()));
     let changed = STATE.with(|s| {
         let mut s = s.borrow_mut();
         let changed = s.sent != list;
@@ -221,8 +282,8 @@ fn send_calendars(always: bool) {
 }
 
 fn load_events() {
-    let Some(week) = STATE.with(|s| s.borrow().week) else { return };
-    let (from, to) = (midnight(week), midnight(week + Duration::days(7)));
+    let Some((from, to)) = STATE.with(|s| s.borrow().range) else { return };
+    let (a, b) = (midnight(from), midnight(to));
     let mut problems = Vec::new();
     let mut events = Vec::new();
     STATE.with(|s| {
@@ -243,26 +304,23 @@ fn load_events() {
                 }
             }
             let cal = &state.open[&info.uid];
-            events.extend(cal.instances(from, to).iter().filter_map(|item| Event::from_item(&info.uid, item)));
+            events.extend(cal.instances(a, b).iter().filter_map(|item| Event::from_item(&info.uid, item)));
         }
         // Watch what is on screen, so syncs and other apps' changes show up.
         let uids: Vec<String> = shown.iter().map(|c| c.uid.clone()).filter(|u| state.open.contains_key(u)).collect();
-        if state.watching.as_ref() != Some(&(week, uids.clone())) {
+        if state.watching.as_ref() != Some(&(from, to, uids.clone())) {
             state.views.clear();
-            let query = range_query(from, to);
+            let query = range_query(a, b);
             for uid in &uids {
                 match state.open[uid].watch(&query, schedule_events) {
                     Ok(view) => state.views.push(view),
                     Err(err) => problems.push(format!("{}: {err}", name_of(state, uid))),
                 }
             }
-            state.watching = Some((week, uids));
+            state.watching = Some((from, to, uids));
         }
-        // Calendars no longer shown are closed.
-        let keep: HashSet<&String> = shown.iter().map(|c| &c.uid).collect();
-        state.open.retain(|uid, _| keep.contains(uid));
     });
     events.sort_by_key(|e| e.sort_key());
-    send(Update::Events { week, events, problems });
+    send(Update::Events { from, to, events, problems });
     send_calendars(false);
 }

@@ -9,4 +9,4 @@ repository.workspace = true
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
-nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "d292643f683b8970b0291b66363fd8c1e9bb7631" }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }

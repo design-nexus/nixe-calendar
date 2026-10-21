@@ -41,3 +41,110 @@
   font-weight: 600;
   font-size: 1.05em;
 }
+
+/* Sidebar month */
+.mini-calendar {
+  padding: 6px 4px 10px 4px;
+}
+
+.mini-title {
+  font-weight: 600;
+  padding-left: 8px;
+}
+
+.mini-nav {
+  min-height: 26px;
+  min-width: 26px;
+  padding: 0;
+}
+
+/* Agenda */
+.agenda {
+  padding: 12px 24px 36px 24px;
+}
+
+.agenda-day {
+  margin: 20px 0 8px 0;
+}
+
+.agenda-day:first-child {
+  margin-top: 4px;
+}
+
+.agenda-card {
+  border-radius: 10px;
+}
+
+button.agenda-row {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 16px;
+  border-bottom: 1px solid @divider;
+}
+
+button.agenda-row:last-child {
+  border-bottom: none;
+}
+
+button.agenda-row:hover {
+  background: @row_hover;
+}
+
+.agenda-time {
+  color: @theme_dim_text;
+  font-size: 0.9em;
+}
+
+.agenda-title {
+  font-weight: 600;
+}
+
+.cancelled {
+  text-decoration: line-through;
+  color: @theme_dim_text;
+}
+
+/* Event popover, quick create and editor */
+.quick-create {
+  padding: 8px 10px;
+  min-width: 300px;
+}
+
+button.chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+.event-notes {
+  color: @theme_dim_text;
+  font-size: 0.92em;
+}
+
+.event-editor .editor-title {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.editor-label {
+  color: @theme_dim_text;
+}
+
+.editor-row {
+  min-height: 34px;
+}
+
+.editor-notes {
+  background: transparent;
+  padding: 6px;
+}
+
+entry.error {
+  border-color: @theme_danger;
+}
+
+button.destructive {
+  color: @theme_danger;
+}

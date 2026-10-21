@@ -523,7 +523,7 @@ dependencies = [
 [[package]]
 name = "nixe-accounts"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "anyhow",
  "gio",
@@ -542,12 +542,14 @@ dependencies = [
  "gtk4",
  "nixe-accounts",
  "nixe-calendar-core",
- "nixe-core 0.1.0 (git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631)",
+ "nixe-core 0.1.0 (git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3)",
  "nixe-eds",
  "nixe-theme",
  "nixe-ui",
+ "nixe-when",
  "pangocairo",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -561,7 +563,7 @@ dependencies = [
 [[package]]
 name = "nixe-camel-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 
 [[package]]
 name = "nixe-core"
@@ -578,7 +580,7 @@ dependencies = [
 [[package]]
 name = "nixe-core"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -590,7 +592,7 @@ dependencies = [
 [[package]]
 name = "nixe-ecal-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -605,7 +607,7 @@ dependencies = [
 [[package]]
 name = "nixe-edataserver-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -621,7 +623,7 @@ dependencies = [
 [[package]]
 name = "nixe-eds"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "gio-sys",
  "glib",
@@ -636,7 +638,7 @@ dependencies = [
 [[package]]
 name = "nixe-icalglib-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -648,7 +650,7 @@ dependencies = [
 [[package]]
 name = "nixe-json-glib-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -660,7 +662,7 @@ dependencies = [
 [[package]]
 name = "nixe-libxml2-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
 
 [[package]]
 name = "nixe-theme"
@@ -681,6 +683,14 @@ dependencies = [
  "gtk4",
  "nixe-core 0.1.0 (git+https://github.com/design-nexus/nixe-core.git?rev=7cd0be5d09cd1d91510794f58bbc720605951c12)",
  "nixe-theme",
+]
+
+[[package]]
+name = "nixe-when"
+version = "0.1.0"
+source = "git+file:///home/ken/Projects/nixe-core?rev=acfd969a85637c30ae64fb48f717a5cc7022fee3#acfd969a85637c30ae64fb48f717a5cc7022fee3"
+dependencies = [
+ "chrono",
 ]
 
 [[package]]

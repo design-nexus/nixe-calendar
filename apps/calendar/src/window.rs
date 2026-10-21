@@ -1,27 +1,42 @@
 //! The Calendar window. The sidebar follows Music: it does not grow, and it
 //! collapses to icons under 980 px or when the user collapses it.
 
+use crate::actions;
+use crate::agenda::AgendaView;
+use crate::days::DaysView;
+use crate::details;
+use crate::draw::{Calendars, Hooks};
+use crate::minical::MiniCalendar;
+use crate::month::MonthView;
 use crate::prefs;
+use crate::quick;
 use crate::settings_dialog;
-use crate::week::WeekView;
 use crate::widgets;
 use crate::worker::{self, Update};
-use chrono::{Datelike, Duration, Local, NaiveDate};
+use chrono::{Datelike, Duration, Local, Months, NaiveDate};
 use gtk::gdk;
 use gtk::glib;
 use gtk::prelude::*;
-use nixe_calendar_core::{CalendarInfo, Event, week_days, week_start};
+use nixe_calendar_core::{CalendarInfo, Event, month_weeks, week_days, week_start};
 use nixe_theme::Rgb;
 use nixe_ui::chrome;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub const SHORTCUTS: &[(&[&str], &str)] = &[
+    (&["N"], "New event"),
     (&["T"], "Go to today"),
-    (&["J"], "Next week"),
-    (&["K"], "Previous week"),
+    (&["J"], "Next day, week or month"),
+    (&["K"], "Previous day, week or month"),
+    (&["D"], "Day view"),
+    (&["W"], "Week view"),
+    (&["M"], "Month view"),
+    (&["A"], "Agenda"),
+    (&["E"], "Edit the open event"),
+    (&["Delete"], "Delete the open event"),
     (&["R"], "Refresh calendars"),
-    (&["Ctrl", "F"], "Find events this week"),
+    (&["Ctrl", "F"], "Find events (Enter searches the year)"),
+    (&["Ctrl", "I"], "Import an .ics file"),
     (&["Esc"], "Clear the search"),
     (&["Ctrl", "B"], "Collapse or expand sidebar"),
     (&["Ctrl", ","], "Settings"),
@@ -29,18 +44,69 @@ pub const SHORTCUTS: &[(&[&str], &str)] = &[
     (&["Ctrl", "Q"], "Close"),
 ];
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ViewKind {
+    Day,
+    Week,
+    Month,
+    Agenda,
+}
+
+impl ViewKind {
+    fn id(self) -> &'static str {
+        match self {
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Agenda => "agenda",
+        }
+    }
+
+    fn from_id(id: &str) -> Self {
+        match id {
+            "day" => Self::Day,
+            "month" => Self::Month,
+            "agenda" => Self::Agenda,
+            _ => Self::Week,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Day => "Day",
+            Self::Week => "Week",
+            Self::Month => "Month",
+            Self::Agenda => "Agenda",
+        }
+    }
+}
+
+const AGENDA_DAYS: i64 = 30;
+const SEARCH_DAYS: i64 = 365;
+
 struct Ui {
     window: gtk::ApplicationWindow,
     overlay: gtk::Overlay,
     nav: gtk::Box,
     nav_list: gtk::Box,
+    search: gtk::SearchEntry,
     banners: gtk::Box,
     title: gtk::Label,
+    switcher: gtk::Box,
+    new_button: gtk::Button,
     pages: gtk::Stack,
-    week_view: WeekView,
+    days: DaysView,
+    month: MonthView,
+    agenda: AgendaView,
+    mini: MiniCalendar,
+    view: ViewKind,
+    anchor: NaiveDate,
+    range: (NaiveDate, NaiveDate),
     calendars: Vec<CalendarInfo>,
     events: Vec<Event>,
-    week: NaiveDate,
+    me: Vec<String>,
+    /// A year-wide search: the query and what it found.
+    results: Option<(String, Vec<Event>)>,
     unavailable: Option<String>,
     loaded: bool,
     refreshing: bool,
@@ -65,12 +131,36 @@ pub fn overlay() -> Option<gtk::Overlay> {
     ui().map(|u| u.borrow().overlay.clone())
 }
 
+pub fn calendars() -> Vec<CalendarInfo> {
+    ui().map(|u| u.borrow().calendars.clone()).unwrap_or_default()
+}
+
+/// The user's own addresses, for invitations.
+pub fn me() -> Vec<String> {
+    ui().map(|u| u.borrow().me.clone()).unwrap_or_default()
+}
+
+/// The calendar new events go to: the last one used, else the first writable shown one.
+pub fn default_calendar() -> String {
+    let list = calendars();
+    let last = prefs::get().last_calendar;
+    if list.iter().any(|c| c.uid == last && !c.read_only) {
+        return last;
+    }
+    list.iter().find(|c| c.selected && !c.read_only).or_else(|| list.iter().find(|c| !c.read_only)).map(|c| c.uid.clone()).unwrap_or_default()
+}
+
+pub fn remember_calendar(uid: &str) {
+    prefs::update(|p| p.last_calendar = uid.to_string());
+}
+
 pub fn present(app: &gtk::Application, section: Option<&str>) {
     let first = ui().is_none();
     if first {
         build(app);
         worker::start();
-        go_to_today();
+        let view = ViewKind::from_id(&nixe_theme::start_page("week", &prefs::get().view));
+        set_view(view);
     }
     let Some(ui) = ui() else { return };
     let window = ui.borrow().window.clone();
@@ -80,11 +170,13 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
     }
     window.present();
     if first {
-        let week_view = ui.borrow().week_view.clone();
-        week_view.scroll_to_hour(prefs::get().day_starts);
+        let days = ui.borrow().days.clone();
+        days.scroll_to_hour(prefs::get().day_starts);
     }
-    if section == Some("settings") {
-        settings_dialog::open();
+    match section {
+        Some("settings") => settings_dialog::open(),
+        Some(id @ ("day" | "week" | "month" | "agenda")) => set_view(ViewKind::from_id(id)),
+        _ => {}
     }
     if let Some(out) = snapshot {
         snapshot_and_quit(app, std::path::PathBuf::from(out));
@@ -95,7 +187,8 @@ fn env_num(key: &str, default: i32) -> i32 {
     std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
 }
 
-/// Renders the window to a PNG and quits (layout checks: `CALENDAR_SNAPSHOT=out.png`).
+/// Renders the window to a PNG and quits (layout checks: `CALENDAR_SNAPSHOT=out.png`;
+/// `CALENDAR_SNAPSHOT_DATE`, `_VIEW`, `_W`, `_H`, `_DELAY`).
 fn snapshot_and_quit(app: &gtk::Application, out: std::path::PathBuf) {
     let Some(ui) = ui() else { return };
     let window = ui.borrow().window.clone();
@@ -103,8 +196,11 @@ fn snapshot_and_quit(app: &gtk::Application, out: std::path::PathBuf) {
     let (w, h) = (env_num("CALENDAR_SNAPSHOT_W", 1120), env_num("CALENDAR_SNAPSHOT_H", 800));
     window.set_opacity(0.01);
     window.set_title(Some("Calendar snapshot"));
+    if let Ok(view) = std::env::var("CALENDAR_SNAPSHOT_VIEW") {
+        set_view(ViewKind::from_id(&view));
+    }
     if let Some(date) = std::env::var("CALENDAR_SNAPSHOT_DATE").ok().and_then(|d| d.parse::<NaiveDate>().ok()) {
-        show(week_start(date, prefs::first_weekday()));
+        go_to(date);
     }
     window.set_default_size(w, h);
     window.set_size_request(w, h);
@@ -133,8 +229,9 @@ pub fn apply(update: Update) {
     let Some(ui) = ui() else { return };
     match update {
         Update::Unavailable(text) => {
-            ui.borrow_mut().unavailable = Some(text);
-            ui.borrow_mut().loaded = true;
+            let mut u = ui.borrow_mut();
+            u.unavailable = Some(text);
+            u.loaded = true;
         }
         Update::Calendars(list) => {
             let mut u = ui.borrow_mut();
@@ -142,24 +239,18 @@ pub fn apply(update: Update) {
             u.loaded = true;
             u.calendars = list;
         }
-        Update::Events { week, events, problems } => {
+        Update::Identities(me) => {
+            ui.borrow_mut().me = me;
+            return;
+        }
+        Update::Events { from, to, events, problems } => {
             for p in problems {
                 toast(&p);
             }
-            if week != ui.borrow().week {
+            if (from, to) != ui.borrow().range {
                 return;
             }
             ui.borrow_mut().events = events;
-        }
-        Update::Problems(problems) => {
-            for p in problems {
-                toast(&p);
-            }
-            ui.borrow_mut().refreshing = false;
-        }
-        Update::Refreshed => {
-            ui.borrow_mut().refreshing = false;
-            toast("Calendars refreshed.");
         }
     }
     redraw();
@@ -168,54 +259,163 @@ pub fn apply(update: Update) {
 fn redraw() {
     rebuild_nav();
     rebuild_banners();
-    show_week();
+    show_view();
     refresh_status();
 }
 
-fn show_week() {
-    let Some(ui) = ui() else { return };
-    let u = ui.borrow();
-    let days = week_days(u.week);
-    let calendars = u.calendars.iter().map(|c| (c.uid.clone(), (c.name.clone(), c.color.clone()))).collect();
-    u.week_view.set(days, u.events.clone(), calendars);
-    u.title.set_text(&week_title(&days));
-    let empty = u.loaded && u.unavailable.is_none() && u.calendars.is_empty();
-    u.pages.set_visible_child_name(if empty { "empty" } else { "week" });
+fn calendar_map(list: &[CalendarInfo]) -> Calendars {
+    list.iter().map(|c| (c.uid.clone(), (c.name.clone(), c.color.clone()))).collect()
 }
 
-fn week_title(days: &[NaiveDate; 7]) -> String {
-    let (a, b) = (days[0], days[6]);
-    if a.month() == b.month() {
-        a.format("%B %Y").to_string()
-    } else if a.year() == b.year() {
-        format!("{} – {}", a.format("%b"), b.format("%b %Y"))
-    } else {
-        format!("{} – {}", a.format("%b %Y"), b.format("%b %Y"))
+fn filtered(events: &[Event], query: &str) -> Vec<Event> {
+    let q = query.trim().to_lowercase();
+    events
+        .iter()
+        .filter(|e| q.is_empty() || e.title.to_lowercase().contains(&q) || e.location.to_lowercase().contains(&q) || e.description.to_lowercase().contains(&q))
+        .cloned()
+        .collect()
+}
+
+/// Draws the current view from what's loaded.
+fn show_view() {
+    let Some(ui) = ui() else { return };
+    let u = ui.borrow();
+    let calendars = calendar_map(&u.calendars);
+    let query = u.search.text().to_string();
+    let empty = u.loaded && u.unavailable.is_none() && u.calendars.is_empty();
+    if empty {
+        u.pages.set_visible_child_name("empty");
+        return;
     }
+    if let Some((q, found)) = &u.results {
+        let today = Local::now().date_naive();
+        u.agenda.set(today - Duration::days(SEARCH_DAYS), 2 * SEARCH_DAYS, found, &calendars, &format!("Nothing matches “{q}”"));
+        u.pages.set_visible_child_name("agenda");
+        u.title.set_text(&format!("Results for “{q}”"));
+        return;
+    }
+    let events = filtered(&u.events, &query);
+    match u.view {
+        ViewKind::Day | ViewKind::Week => {
+            let days: Vec<NaiveDate> = (0..(u.range.1 - u.range.0).num_days()).map(|i| u.range.0 + Duration::days(i)).collect();
+            u.days.set(days, &events, calendars);
+            u.pages.set_visible_child_name("days");
+        }
+        ViewKind::Month => {
+            u.month.set(u.anchor.month(), month_weeks(u.anchor, prefs::first_weekday()), &events, calendars);
+            u.pages.set_visible_child_name("month");
+        }
+        ViewKind::Agenda => {
+            u.agenda.set(u.range.0, (u.range.1 - u.range.0).num_days(), &events, &calendars, "Nothing in the next 30 days");
+            u.pages.set_visible_child_name("agenda");
+        }
+    }
+    u.title.set_text(&view_title(u.view, u.anchor, u.range));
+}
+
+fn view_title(view: ViewKind, anchor: NaiveDate, (from, to): (NaiveDate, NaiveDate)) -> String {
+    let last = to - Duration::days(1);
+    match view {
+        ViewKind::Day => anchor.format("%A, %B %-d, %Y").to_string(),
+        ViewKind::Month => anchor.format("%B %Y").to_string(),
+        ViewKind::Week | ViewKind::Agenda => {
+            if from.month() == last.month() && view == ViewKind::Week {
+                from.format("%B %Y").to_string()
+            } else if from.year() == last.year() {
+                format!("{} – {}", from.format("%b %-d"), last.format("%b %-d, %Y"))
+            } else {
+                format!("{} – {}", from.format("%b %-d, %Y"), last.format("%b %-d, %Y"))
+            }
+        }
+    }
+}
+
+fn range_for(view: ViewKind, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
+    match view {
+        ViewKind::Day => (anchor, anchor + Duration::days(1)),
+        ViewKind::Week => {
+            let s = week_start(anchor, prefs::first_weekday());
+            (s, week_days(s)[6] + Duration::days(1))
+        }
+        ViewKind::Month => {
+            let rows = month_weeks(anchor, prefs::first_weekday());
+            let first = rows.first().map(|r| r[0]).unwrap_or(anchor);
+            let last = rows.last().map(|r| r[6]).unwrap_or(anchor);
+            (first, last + Duration::days(1))
+        }
+        ViewKind::Agenda => (anchor, anchor + Duration::days(AGENDA_DAYS)),
+    }
+}
+
+/// Shows `date` in the current view.
+pub fn go_to(date: NaiveDate) {
+    let Some(ui) = ui() else { return };
+    let view = ui.borrow().view;
+    let range = range_for(view, date);
+    {
+        let mut u = ui.borrow_mut();
+        if u.range != range {
+            u.events.clear();
+        }
+        u.anchor = date;
+        u.range = range;
+        u.results = None;
+    }
+    worker::show_range(range.0, range.1);
+    let mini = ui.borrow().mini.clone();
+    mini.show(range.0, range.1, date);
+    show_view();
+    refresh_status();
 }
 
 pub fn go_to_today() {
-    show(week_start(Local::now().date_naive(), prefs::first_weekday()));
+    go_to(Local::now().date_naive());
 }
 
-fn shift(weeks: i64) {
+fn set_view(view: ViewKind) {
     let Some(ui) = ui() else { return };
-    let week = ui.borrow().week + Duration::weeks(weeks);
-    show(week);
+    let anchor = ui.borrow().anchor;
+    ui.borrow_mut().view = view;
+    prefs::update(|p| p.view = view.id().to_string());
+    chrome::set_title(&ui.borrow().window, "Calendar", view.name());
+    let switcher = ui.borrow().switcher.clone();
+    select_segment(&switcher, view.id());
+    go_to(anchor);
 }
 
-fn show(week: NaiveDate) {
-    let Some(ui) = ui() else { return };
-    {
-        let mut u = ui.borrow_mut();
-        if u.week != week {
-            u.events.clear();
+fn select_segment(switcher: &gtk::Box, id: &str) {
+    let ids = ["day", "week", "month", "agenda"];
+    let mut child = switcher.first_child();
+    let mut i = 0;
+    while let Some(widget) = child {
+        if let Some(toggle) = widget.downcast_ref::<gtk::ToggleButton>()
+            && ids.get(i) == Some(&id)
+            && !toggle.is_active()
+        {
+            toggle.set_active(true);
         }
-        u.week = week;
+        i += 1;
+        child = widget.next_sibling();
     }
-    worker::show_week(week);
-    show_week();
-    refresh_status();
+}
+
+fn shift(step: i64) {
+    let Some(ui) = ui() else { return };
+    let (view, anchor) = (ui.borrow().view, ui.borrow().anchor);
+    let date = match view {
+        ViewKind::Day => anchor + Duration::days(step),
+        ViewKind::Week => anchor + Duration::weeks(step),
+        ViewKind::Agenda => anchor + Duration::days(step * 7),
+        ViewKind::Month => {
+            let first = anchor.with_day(1).unwrap_or(anchor);
+            if step < 0 {
+                first.checked_sub_months(Months::new(step.unsigned_abs() as u32)).unwrap_or(first)
+            } else {
+                first.checked_add_months(Months::new(step as u32)).unwrap_or(first)
+            }
+        }
+    };
+    go_to(date);
 }
 
 fn refresh() {
@@ -225,15 +425,51 @@ fn refresh() {
     }
     ui.borrow_mut().refreshing = true;
     refresh_status();
-    worker::refresh();
+    worker::refresh(|problems| {
+        if let Some(state) = self::ui() {
+            state.borrow_mut().refreshing = false;
+        }
+        if problems.is_empty() {
+            toast("Calendars refreshed.");
+        } else {
+            for p in problems {
+                toast(&p);
+            }
+        }
+        refresh_status();
+    });
+}
+
+/// Searches every shown calendar a year either side of today.
+fn search_year(query: String) {
+    if query.trim().is_empty() {
+        return;
+    }
+    let today = Local::now().date_naive();
+    let q = query.clone();
+    worker::ask(
+        move || worker::events_between(today - Duration::days(SEARCH_DAYS), today + Duration::days(SEARCH_DAYS)),
+        move |events| {
+            let Some(ui) = ui() else { return };
+            let found = filtered(&events, &q);
+            ui.borrow_mut().results = Some((q, found));
+            show_view();
+            refresh_status();
+        },
+    );
 }
 
 fn refresh_status() {
     let Some(ui) = ui() else { return };
     let u = ui.borrow();
-    let shown: Vec<&CalendarInfo> = u.calendars.iter().filter(|c| c.selected).collect();
-    let count = u.week_view.shown();
-    let mut parts = vec![format!("Week {}", u.week.iso_week().week())];
+    let mut parts = Vec::new();
+    let count = match &u.results {
+        Some((_, found)) => found.len(),
+        None => filtered(&u.events, &u.search.text()).len(),
+    };
+    if u.view == ViewKind::Week && u.results.is_none() {
+        parts.push(format!("Week {}", u.range.0.iso_week().week()));
+    }
     parts.push(match count {
         0 => "No events".into(),
         1 => "1 event".into(),
@@ -241,7 +477,7 @@ fn refresh_status() {
     });
     if u.refreshing {
         parts.push("Refreshing…".into());
-    } else if shown.iter().any(|c| c.offline) {
+    } else if u.calendars.iter().any(|c| c.selected && c.offline) {
         parts.push("Offline".into());
     }
     STATUS.with(|s| {
@@ -257,6 +493,14 @@ pub fn open_online_accounts() {
     if !started && nixe_accounts::open_management().is_err() {
         toast("Install Nixe Settings or gnome-online-accounts-gtk to add accounts.");
     }
+}
+
+/// Quick create from the toolbar's + (or N).
+fn new_event() {
+    let Some(ui) = ui() else { return };
+    let button = ui.borrow().new_button.clone();
+    let rect = gdk::Rectangle::new(0, 0, button.width(), button.height());
+    quick::show(button.upcast_ref(), rect, None);
 }
 
 // ---------- Banners ----------
@@ -286,7 +530,7 @@ fn rebuild_banners() {
         asked.push(group);
     }
     if u.calendars.iter().any(|c| c.selected && c.offline) {
-        banners.append(&widgets::banner("Offline. Showing your saved calendars; they update when you're back online.", false));
+        banners.append(&widgets::banner("Offline. Showing your saved calendars; changes sync when you're back online.", false));
     }
     banners.set_visible(banners.first_child().is_some());
 }
@@ -352,6 +596,12 @@ fn calendar_button(cal: &CalendarInfo) -> gtk::Button {
         offline.add_css_class("dim");
         offline.set_tooltip_text(Some("Offline: showing the saved copy"));
         content.append(&offline);
+    } else if cal.read_only {
+        let lock = gtk::Image::from_icon_name("changes-prevent-symbolic");
+        lock.add_css_class("compact-hide");
+        lock.add_css_class("dim");
+        lock.set_tooltip_text(Some("Read only"));
+        content.append(&lock);
     }
     button.set_child(Some(&content));
     let verb = if cal.selected { "Hide" } else { "Show" };
@@ -362,12 +612,9 @@ fn calendar_button(cal: &CalendarInfo) -> gtk::Button {
     button
 }
 
-fn group_label(text: &str, first: bool, add: bool) -> gtk::Widget {
+fn group_label(text: &str, add: bool) -> gtk::Widget {
     let label = widgets::label(&text.to_uppercase(), "nav-group");
     label.add_css_class("compact-hide");
-    if first {
-        label.add_css_class("first");
-    }
     if !add {
         return label.upcast();
     }
@@ -388,14 +635,11 @@ fn group_label(text: &str, first: bool, add: bool) -> gtk::Widget {
 fn rebuild_nav() {
     let Some(ui) = ui() else { return };
     let list = ui.borrow().nav_list.clone();
+    let mini = ui.borrow().mini.root.clone();
     while let Some(child) = list.first_child() {
         list.remove(&child);
     }
-    list.append(&group_label("Views", true, false));
-    let week = nav_button("x-office-calendar-symbolic", "Week", "This week (T)");
-    week.add_css_class("active");
-    week.connect_clicked(|_| go_to_today());
-    list.append(&week);
+    list.append(&mini);
 
     let calendars = ui.borrow().calendars.clone();
     let mut groups: Vec<(String, Vec<CalendarInfo>)> = Vec::new();
@@ -407,7 +651,7 @@ fn rebuild_nav() {
         }
     }
     for (i, (label, items)) in groups.iter().enumerate() {
-        list.append(&group_label(label, false, i == 0));
+        list.append(&group_label(label, i == 0));
         for cal in items {
             list.append(&calendar_button(cal));
         }
@@ -416,6 +660,9 @@ fn rebuild_nav() {
     let spacer = gtk::Box::new(gtk::Orientation::Vertical, 0);
     spacer.set_vexpand(true);
     list.append(&spacer);
+    let today = nav_button("x-office-calendar-symbolic", "Today", "Go to today (T)");
+    today.connect_clicked(|_| go_to_today());
+    list.append(&today);
     let accounts = nav_button("system-users-symbolic", "Online accounts", "Add or sign in to calendar accounts in Settings");
     accounts.connect_clicked(|_| open_online_accounts());
     list.append(&accounts);
@@ -426,27 +673,51 @@ fn rebuild_nav() {
 
 // ---------- Building ----------
 
-fn toolbar() -> (gtk::Box, gtk::Label) {
+fn hooks() -> Rc<Hooks> {
+    Rc::new(Hooks {
+        event: Box::new(details::show),
+        empty: Box::new(|widget, rect, slot| quick::show(widget, rect, Some(slot))),
+        day: Box::new(|date| {
+            set_view(ViewKind::Day);
+            go_to(date);
+        }),
+    })
+}
+
+fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
     let bar = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     bar.add_css_class("toolbar");
     bar.add_css_class("list-toolbar");
-    let prev = widgets::icon_button("go-previous-symbolic", "Previous week (K)");
+    let prev = widgets::icon_button("go-previous-symbolic", "Previous (K)");
     prev.connect_clicked(|_| shift(-1));
     let today = widgets::icon_button("go-home-symbolic", "Today (T)");
     today.connect_clicked(|_| go_to_today());
-    let next = widgets::icon_button("go-next-symbolic", "Next week (J)");
+    let next = widgets::icon_button("go-next-symbolic", "Next (J)");
     next.connect_clicked(|_| shift(1));
     let title = widgets::label("", "toolbar-title");
     title.set_margin_start(8);
     title.set_ellipsize(gtk::pango::EllipsizeMode::End);
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
+    title.set_hexpand(true);
+    title.set_xalign(0.0);
+    let switcher = widgets::segmented(
+        &widgets::opts(&[("day", "Day"), ("week", "Week"), ("month", "Month"), ("agenda", "Agenda")]),
+        &prefs::get().view,
+        |id| {
+            if ui().is_some_and(|u| u.borrow().view.id() != id) {
+                set_view(ViewKind::from_id(&id));
+            }
+        },
+    );
+    switcher.set_tooltip_text(Some("Day (D), Week (W), Month (M), Agenda (A)"));
+    let add = widgets::icon_button("list-add-symbolic", "New event (N)");
+    add.add_css_class("suggested-action");
+    add.connect_clicked(|_| new_event());
     let reload = widgets::icon_button("view-refresh-symbolic", "Refresh (R)");
     reload.connect_clicked(|_| refresh());
-    for w in [prev.upcast_ref::<gtk::Widget>(), today.upcast_ref(), next.upcast_ref(), title.upcast_ref(), spacer.upcast_ref(), reload.upcast_ref()] {
+    for w in [prev.upcast_ref::<gtk::Widget>(), today.upcast_ref(), next.upcast_ref(), title.upcast_ref(), switcher.upcast_ref(), add.upcast_ref(), reload.upcast_ref()] {
         bar.append(w);
     }
-    (bar, title)
+    (bar, title, switcher, add)
 }
 
 fn build(app: &gtk::Application) {
@@ -454,7 +725,6 @@ fn build(app: &gtk::Application) {
     window.add_css_class("calendar-window");
     window.set_titlebar(Some(&gtk::Box::new(gtk::Orientation::Horizontal, 0)));
     window.set_icon_name(Some("io.github.design_nexus.nixe.Calendar"));
-    chrome::set_title(&window, "Calendar", "Week");
     nixe_ui::keys::install(
         &window,
         nixe_ui::keys::Common { settings: Some(settings_dialog::open), shortcuts: Some(show_shortcuts), close: true, ..Default::default() },
@@ -477,17 +747,17 @@ fn build(app: &gtk::Application) {
     nav.append(&head.root);
     nav.append(&nav_scroll);
 
-    let week_view = WeekView::new();
     let search = gtk::SearchEntry::new();
-    search.set_placeholder_text(Some("Find events this week"));
+    search.set_placeholder_text(Some("Find events — Enter searches the whole year"));
     search.set_visible(false);
-    {
-        let wv = week_view.clone();
-        search.connect_search_changed(move |entry| {
-            wv.set_filter(&entry.text());
-            refresh_status();
-        });
-    }
+    search.connect_search_changed(|_| {
+        if let Some(ui) = ui() {
+            ui.borrow_mut().results = None;
+        }
+        show_view();
+        refresh_status();
+    });
+    search.connect_activate(|entry| search_year(entry.text().to_string()));
     search.connect_stop_search(|entry| {
         entry.set_text("");
         entry.set_visible(false);
@@ -507,11 +777,18 @@ fn build(app: &gtk::Application) {
     let banners = gtk::Box::new(gtk::Orientation::Vertical, 8);
     banners.add_css_class("banners");
     banners.set_visible(false);
-    let (bar, title) = toolbar();
+    let (bar, title, switcher, new_button) = toolbar();
 
+    let hooks = hooks();
+    let days = DaysView::new(hooks.clone());
+    let month = MonthView::new(hooks.clone());
+    let agenda = AgendaView::new(hooks);
+    let mini = MiniCalendar::new(go_to);
     let pages = gtk::Stack::new();
     pages.set_transition_type(gtk::StackTransitionType::Crossfade);
-    pages.add_named(&week_view.root, Some("week"));
+    pages.add_named(&days.root, Some("days"));
+    pages.add_named(&month.root, Some("month"));
+    pages.add_named(&agenda.root, Some("agenda"));
     let empty = widgets::empty_state(
         "x-office-calendar-symbolic",
         "No calendars yet",
@@ -543,18 +820,29 @@ fn build(app: &gtk::Application) {
     window.set_child(Some(&overlay));
     install_keys(&window, &search);
 
+    let today = Local::now().date_naive();
     let ui = Ui {
         window: window.clone(),
         overlay: overlay.clone(),
         nav: nav.clone(),
         nav_list: list,
+        search,
         banners,
         title,
+        switcher,
+        new_button,
         pages,
-        week_view,
+        days,
+        month,
+        agenda,
+        mini,
+        view: ViewKind::from_id(&prefs::get().view),
+        anchor: today,
+        range: (today, today),
         calendars: Vec::new(),
         events: Vec::new(),
-        week: week_start(Local::now().date_naive(), prefs::first_weekday()),
+        me: Vec::new(),
+        results: None,
         unavailable: None,
         loaded: false,
         refreshing: false,
@@ -603,6 +891,7 @@ fn status_bar() -> gtk::Box {
     readout.set_ellipsize(gtk::pango::EllipsizeMode::Start);
     STATUS.with(|s| *s.borrow_mut() = Some(readout.clone()));
     bar.append(&readout);
+    bar.append(&chrome::status_action("document-open-symbolic", "Import an .ics file (Ctrl+I)", actions::import_dialog));
     bar.append(&chrome::gear(settings_dialog::open));
     bar
 }
@@ -652,22 +941,31 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
     let win = window.clone();
     keys.connect_key_pressed(move |_, key, _, mods| {
         let ctrl = mods.contains(gdk::ModifierType::CONTROL_MASK);
-        if ctrl && key == gdk::Key::f {
-            search.set_visible(true);
-            search.grab_focus();
+        if ctrl {
+            match key {
+                gdk::Key::f => {
+                    search.set_visible(true);
+                    search.grab_focus();
+                }
+                gdk::Key::b => toggle_sidebar(),
+                gdk::Key::i => actions::import_dialog(),
+                gdk::Key::n => new_event(),
+                _ => return glib::Propagation::Proceed,
+            }
             return glib::Propagation::Stop;
         }
-        if ctrl && key == gdk::Key::b {
-            toggle_sidebar();
-            return glib::Propagation::Stop;
-        }
-        if ctrl || typing(win.upcast_ref()) {
+        if typing(win.upcast_ref()) {
             return glib::Propagation::Proceed;
         }
         match key {
             gdk::Key::t => go_to_today(),
             gdk::Key::j | gdk::Key::Right => shift(1),
             gdk::Key::k | gdk::Key::Left => shift(-1),
+            gdk::Key::d => set_view(ViewKind::Day),
+            gdk::Key::w => set_view(ViewKind::Week),
+            gdk::Key::m => set_view(ViewKind::Month),
+            gdk::Key::a => set_view(ViewKind::Agenda),
+            gdk::Key::n => new_event(),
             gdk::Key::r => refresh(),
             gdk::Key::slash => {
                 search.set_visible(true);
@@ -709,6 +1007,15 @@ pub fn show_shortcuts() {
 }
 
 pub fn toast(message: &str) {
+    show_toast(message, None);
+}
+
+/// A toast with Undo; it stays 6 s.
+pub fn toast_undo(message: &str, undo: impl Fn() + 'static) {
+    show_toast(message, Some(Box::new(undo)));
+}
+
+fn show_toast(message: &str, undo: Option<Box<dyn Fn()>>) {
     let Some(ui) = ui() else {
         eprintln!("nixe-calendar: {message}");
         return;
@@ -728,9 +1035,21 @@ pub fn toast(message: &str) {
     bx.set_valign(gtk::Align::End);
     bx.set_margin_bottom(48);
     bx.append(&label);
+    let lasts = if undo.is_some() { 6000 } else { 3500 };
+    if let Some(undo) = undo {
+        let button = gtk::Button::with_label("Undo");
+        let (o, b) = (overlay.clone(), bx.clone());
+        button.connect_clicked(move |_| {
+            undo();
+            if b.parent().is_some() {
+                o.remove_overlay(&b);
+            }
+        });
+        bx.append(&button);
+    }
     overlay.add_overlay(&bx);
     TOAST.with(|t| *t.borrow_mut() = Some(bx.clone()));
-    glib::timeout_add_local_once(std::time::Duration::from_millis(3500), move || {
+    glib::timeout_add_local_once(std::time::Duration::from_millis(lasts), move || {
         if bx.parent().is_some() {
             overlay.remove_overlay(&bx);
         }

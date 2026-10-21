@@ -8,12 +8,12 @@ mod repeat;
 mod week;
 
 pub use month::{Agenda, MonthLayout, agenda, month_weeks};
-pub use nixe_eds::{Attendee, Response};
+pub use nixe_eds::{Attendee, Response, When};
 pub use repeat::{Ends, Frequency, Repeat};
 pub use week::{AllDayBar, Placed, WeekLayout, week_days, week_start};
 
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
-use nixe_eds::{Item, When};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
+use nixe_eds::Item;
 
 /// A calendar in the sidebar.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -32,6 +32,8 @@ pub struct CalendarInfo {
     pub needs_sign_in: bool,
     /// The backend can't reach its server; events come from the saved copy.
     pub offline: bool,
+    /// Events can't be added or changed here (subscriptions, shared calendars).
+    pub read_only: bool,
 }
 
 impl CalendarInfo {
@@ -153,6 +155,34 @@ fn date_of(when: When) -> Option<NaiveDate> {
 
 fn local<Tz: TimeZone>(secs: i64, tz: &Tz) -> Option<NaiveDateTime> {
     Some(DateTime::from_timestamp(secs, 0)?.with_timezone(tz).naive_local())
+}
+
+/// Unix seconds for a local wall-clock time (the earlier one if the clock repeats
+/// an hour, the next valid time if it skips).
+pub fn timestamp(at: NaiveDateTime) -> i64 {
+    timestamp_in(at, &Local)
+}
+
+pub fn timestamp_in<Tz: TimeZone>(at: NaiveDateTime, tz: &Tz) -> i64 {
+    match tz.from_local_datetime(&at) {
+        chrono::LocalResult::Single(t) | chrono::LocalResult::Ambiguous(t, _) => t.timestamp(),
+        chrono::LocalResult::None => tz.from_local_datetime(&(at + chrono::Duration::hours(1))).earliest().map_or(0, |t| t.timestamp()),
+    }
+}
+
+/// An event's start and end as EDS values (an all-day end is the day after).
+pub fn whens(span: Span) -> (When, When) {
+    match span {
+        Span::AllDay { first, last } => {
+            let next = last.succ_opt().unwrap_or(last);
+            (date_when(first), date_when(next))
+        }
+        Span::Timed { start, end } => (When::Time(timestamp(start)), When::Time(timestamp(end))),
+    }
+}
+
+pub fn date_when(d: NaiveDate) -> When {
+    When::Date { year: d.year(), month: d.month(), day: d.day() }
 }
 
 /// Unix seconds for local midnight at the start of `date` (the earlier one if the

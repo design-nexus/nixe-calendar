@@ -18,6 +18,10 @@ pub struct Prefs {
     pub week_start: String,
     /// The hour the week view scrolls to when it opens.
     pub day_starts: u32,
+    /// `day`, `week`, `month` or `agenda`.
+    pub view: String,
+    /// The calendar new events go to.
+    pub last_calendar: String,
 }
 
 impl Default for Prefs {
@@ -31,6 +35,8 @@ impl Default for Prefs {
             last_section: "week".into(),
             week_start: default_week_start().into(),
             day_starts: 8,
+            view: "week".into(),
+            last_calendar: String::new(),
         }
     }
 }
