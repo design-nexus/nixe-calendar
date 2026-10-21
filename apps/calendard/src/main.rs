@@ -3,7 +3,8 @@
 //! and keeps `agenda.sqlite` current for Glimpse. No GTK.
 //!
 //! While Evolution's own `evolution-alarm-notify` runs, it doesn't notify, so
-//! alerts aren't shown twice; both use EDS's record of dismissed alerts.
+//! alerts aren't shown twice; both use EDS's record of dismissed alerts. Alerts
+//! from task lists are left to Nixe Reminders.
 
 mod agenda;
 mod notify;
@@ -94,7 +95,9 @@ fn start() {
                 if notify::other_notifier_running() {
                     return;
                 }
-                for reminder in due {
+                // Task lists' alerts are Nixe Reminders' to show.
+                let events_only = |source: &str| STATE.with(|s| s.borrow().registry.as_ref().is_some_and(|r| r.source(source, Kind::Calendar).is_some()));
+                for reminder in due.into_iter().filter(|r| events_only(&r.source)) {
                     notifier.show(reminder);
                 }
             });
