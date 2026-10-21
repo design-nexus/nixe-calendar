@@ -36,7 +36,7 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 
 ### 3. Advanced
 - [ ] Year view
-- [ ] Natural-language quick create (`nixe-when`), preview before saving when ambiguous
+- [x] Natural-language quick create (`nixe-when`), other readings offered before saving (done with the MVP)
 - [ ] Calendar Sets (Work, Personal, Combined, custom)
 - [ ] Scheduling assistant: free/busy, working hours, suggested times
 - [ ] Smart scheduling: propose moves; never change an existing event without approval
