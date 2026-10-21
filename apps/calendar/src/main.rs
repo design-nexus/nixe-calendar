@@ -29,6 +29,22 @@ const USAGE: &str = "Usage: nixe-calendar [OPTIONS] [FILE.ics...]\n\
   --section ID    open day, week, month, agenda or settings\n\
   --toggle        close the window if it's open, otherwise open it\n";
 
+/// Starts the reminders service if it's installed and not running (it's enabled
+/// for login by the installer, which doesn't start it).
+fn start_reminders() {
+    if std::env::var_os("CALENDAR_SNAPSHOT").is_some() {
+        return;
+    }
+    let unit = nixe_core::paths::config_home().join("systemd/user/nixe-calendard.service");
+    if unit.exists() {
+        let _ = std::process::Command::new("systemctl")
+            .args(["--user", "start", "--no-block", "nixe-calendard.service"])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
 fn main() -> glib::ExitCode {
     nixe_core::app::init(nixe_core::app::App { slug: "nixe-calendar", name: "Calendar" });
     let args: Vec<String> = std::env::args().collect();
@@ -45,6 +61,7 @@ fn main() -> glib::ExitCode {
     app.connect_startup(|app| {
         theme::install();
         nixe_core::control::serve_async(app, control::tools(), control::handle);
+        start_reminders();
     });
     app.connect_command_line(|app, cl| {
         let argv: Vec<String> = cl.arguments().iter().map(|a| a.to_string_lossy().to_string()).collect();

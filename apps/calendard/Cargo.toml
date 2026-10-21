@@ -1,0 +1,26 @@
+[package]
+name = "nixe-calendard"
+version = "0.1.0"
+description = "Calendar reminders and the agenda for Glimpse, in the background"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "nixe-calendard"
+path = "src/main.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+gio = "0.22"
+glib = "0.22"
+nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
+nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3", default-features = false }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }
+rusqlite = { version = "0.40", features = ["bundled"] }
+
+[dev-dependencies]
+gio = "0.22"
+glib = "0.22"
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "acfd969a85637c30ae64fb48f717a5cc7022fee3" }

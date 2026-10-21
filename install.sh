@@ -43,7 +43,7 @@ app_info() {
     fonts) ids="Fonts" old_bins="fonts" deps="fontconfig pango tar xz" ;;
     archive) ids="Archive" old_bins="archive" deps="7zip" defaults=true ;;
     weather) ids="Weather" ;;
-    calendar) ids="Calendar" deps="evolution-data-server" defaults=true ;;
+    calendar) ids="Calendar" deps="evolution-data-server" bins="nixe-calendar nixe-calendard" defaults=true ;;
     capture) ids="Capture" deps="grim wl-clipboard tesseract gtk4-layer-shell tesseract-data-eng" bins="nixe-capture nixe-capture-glimpse" ;;
     pulse) ids="Pulse" bins="nixe-pulse nixe-pulse-glimpse" deps="mpv ffmpeg tlottie libsecret clang unzip gstreamer gst-plugins-base gst-plugins-good gst-plugin-pipewire libcanberra geoclue webkit2gtk-4.1 python-gobject libfido2" ;;
     office)
@@ -185,6 +185,7 @@ if [[ $prebuilt == false ]]; then
   for a in "${apps[@]}"; do app_info "$a"; pkgs+=(-p "$pkg"); done
   if [[ " ${apps[*]} " == *" settings "* ]]; then pkgs+=(-p nixe-goa-helper); fi
   if [[ " ${apps[*]} " == *" news "* ]]; then pkgs+=(-p nixe-news-glimpse); fi
+  if [[ " ${apps[*]} " == *" calendar "* ]]; then pkgs+=(-p nixe-calendard); fi
   if [[ " ${apps[*]} " == *" capture "* ]]; then pkgs+=(-p nixe-capture-glimpse); fi
   if [[ " ${apps[*]} " == *" pulse "* ]]; then pkgs+=(-p nixe-pulse-glimpse); fi
   if [[ " ${apps[*]} " == *" pulse "* ]]; then "$src/apps/pulse/packaging/prepare-native.sh"; fi
@@ -263,6 +264,15 @@ for a in "${apps[@]}"; do
     asroot install -m 644 "$d/data/io.github.design_nexus.nixe.store.policy" /usr/share/polkit-1/actions/io.github.design_nexus.nixe.store.policy
     # The privileged entry point is never executed from a user-writable directory.
     rm -f "$bin/nixe-store-helper"
+  fi
+
+  if [[ $a == calendar ]]; then
+    # Reminders run in the background; enabled for the next login, and started
+    # when Calendar opens, so installing never starts anything.
+    mkdir -p "$config/systemd/user"
+    install -m 644 "$d/../calendard/data/nixe-calendard.service" "$config/systemd/user/nixe-calendard.service"
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable nixe-calendard.service >/dev/null 2>&1 || true
   fi
 
   if [[ $a == passwords ]]; then

@@ -21,3 +21,18 @@
   It prints the sidebar width and whether the nav is compact.
 - Until nixe-core's nixe-eds is published, Cargo.toml points at the sibling checkout
   with a `file://` git URL; CI refuses that on purpose.
+- `apps/calendard` (`nixe-calendard`): GTK-free user service. EDS's `EReminderWatcher`
+  (through `nixe_eds::Reminders`) → org.freedesktop.Notifications with Open, Snooze
+  10 min, Dismiss; quiet while `evolution-alarm-notify` runs. Writes
+  `~/.local/share/nixe-calendar/agenda.sqlite` (schema in `agenda.rs`; a contract for
+  Glimpse). The installer enables the unit without starting it; the app starts it on
+  open. `nixe-calendard --write-agenda` writes once. End to end:
+  `tools/test-calendard.sh` (scratch EDS, fake notification server).
+- Views: `days.rs` (day and week), `month.rs`, `agenda.rs` (also year-wide search
+  results), `minical.rs`; shared drawing in `draw.rs`. Clicks go through `draw::Hooks`
+  to `details.rs` (popover), `quick.rs` (natural-language create) and `editor.rs`.
+  Changes run through `actions.rs` on the worker (`worker::ask`). Delete keeps an export
+  of the series for Undo.
+- Control tools (`control.rs`): `calendar.list/read/next/search/free_slots` read;
+  `calendar.create/edit/delete` change. Before Assistant uses them, its `nixe-apps`
+  ability needs them and its policy must treat the changing ones as edits.

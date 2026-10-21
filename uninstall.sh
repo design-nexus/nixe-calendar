@@ -36,7 +36,7 @@ for a in "${apps[@]}"; do
     office) bins="nixe-office nixe-write nixe-sheets nixe-present" ids="Write Sheets Present" ;;
     photos) bins="nixe-photos nixe-viewer" ids="Photos PhotoViewer" ;;
     pdf) bins="nixe-pdf" ids="Pdf" ;;
-    calendar) bins="nixe-calendar" ids="Calendar" ;;
+    calendar) bins="nixe-calendar nixe-calendard" ids="Calendar" ;;
     capture) bins="nixe-capture nixe-capture-glimpse" ids="Capture" ;;
     pulse) bins="nixe-pulse nixe-pulse-glimpse" ids="Pulse" ;;
     *) bins="nixe-$a" ids="${a^}" ;;
@@ -48,6 +48,11 @@ for a in "${apps[@]}"; do
     systemctl --user daemon-reload 2>/dev/null || true
     rm -rf "$share/nixe-settings/extensions/glimpse" "$share/settings/extensions/glimpse"
     bins="nixe-glimpse nixe-glimpsed nixe-glimpse-settings"
+  fi
+  if [[ $a == calendar ]]; then
+    systemctl --user disable --now nixe-calendard.service 2>/dev/null || true
+    rm -f "$config/systemd/user/nixe-calendard.service"
+    systemctl --user daemon-reload 2>/dev/null || true
   fi
   if [[ $a == passwords ]]; then
     # Stopping the service locks the vault and clears a copy it left on the clipboard.

@@ -2,7 +2,8 @@
   "application": "calendar",
   "directory": "calendar",
   "packages": [
-    "nixe-calendar"
+    "nixe-calendar",
+    "nixe-calendard"
   ],
   "manifest": "Cargo.toml",
   "prepare": [],
@@ -15,7 +16,9 @@
       "-p",
       "nixe-calendar-core",
       "-p",
-      "nixe-calendar"
+      "nixe-calendar",
+      "-p",
+      "nixe-calendard"
     ]
   ]
 }
