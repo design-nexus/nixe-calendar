@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Calendar
+GenericName=Calendar
+Comment=Your online and local calendars
+Exec=nixe-calendar
+Icon=io.github.design_nexus.nixe.Calendar
+Terminal=false
+Categories=Office;Calendar;GTK;
+Keywords=calendar;events;schedule;meeting;agenda;week;
+StartupWMClass=io.github.design_nexus.nixe.Calendar
+StartupNotify=true

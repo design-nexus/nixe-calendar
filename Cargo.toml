@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = ["apps/calendar", "crates/nixe-calendar-core"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+authors = ["Ken Smith"]
+repository = "https://github.com/design-nexus/nixe-calendar"
+
+[profile.release]
+lto = "thin"
+strip = true

@@ -1,0 +1,26 @@
+[package]
+name = "nixe-calendar"
+version = "0.1.0"
+description = "A calendar for Omarchy: your online and local calendars in one place"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "nixe-calendar"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+glib = "0.22"
+gtk = { version = "0.11", package = "gtk4", features = ["v4_18"] }
+nixe-accounts = { git = "file:///home/ken/Projects/nixe-core", rev = "08587d36ee1811bb196de2107e7ffef8839c6105" }
+nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
+nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "08587d36ee1811bb196de2107e7ffef8839c6105" }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "08587d36ee1811bb196de2107e7ffef8839c6105" }
+nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+pangocairo = "0.22"
+nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+serde = { version = "1.0.229", features = ["derive"] }

@@ -1,0 +1,21 @@
+{
+  "application": "calendar",
+  "directory": "calendar",
+  "packages": [
+    "nixe-calendar"
+  ],
+  "manifest": "Cargo.toml",
+  "prepare": [],
+  "binaries": [],
+  "test_commands": [
+    [
+      "cargo",
+      "test",
+      "--locked",
+      "-p",
+      "nixe-calendar-core",
+      "-p",
+      "nixe-calendar"
+    ]
+  ]
+}

@@ -1,0 +1,43 @@
+/* Calendar: only what the shared base.css doesn't already style. */
+
+.toolbar {
+  background: transparent;
+  min-height: 46px;
+  padding: 0 12px 0 14px;
+  border-bottom: 1px solid @hairline;
+}
+
+.toolbar-title {
+  font-weight: 600;
+  color: @theme_text;
+}
+
+.banners {
+  padding: 12px 16px;
+  border-bottom: 1px solid @hairline;
+}
+
+.settings-navigation button.calendar-item.hidden-calendar .nav-label {
+  color: @theme_dim_text;
+}
+
+.settings-navigation .nav-group-add {
+  min-height: 22px;
+  min-width: 22px;
+  padding: 0;
+  margin-right: 4px;
+}
+
+.week-header {
+  border-bottom: 1px solid @hairline;
+}
+
+.event-details {
+  padding: 8px 10px;
+  min-width: 220px;
+}
+
+.event-title {
+  font-weight: 600;
+  font-size: 1.05em;
+}
