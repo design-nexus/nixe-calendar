@@ -3,8 +3,13 @@
 //! Events come from Evolution Data Server through `nixe-eds`; this crate turns
 //! them into local wall-clock spans and lays a week out for drawing.
 
+mod month;
+mod repeat;
 mod week;
 
+pub use month::{Agenda, MonthLayout, agenda, month_weeks};
+pub use nixe_eds::{Attendee, Response};
+pub use repeat::{Ends, Frequency, Repeat};
 pub use week::{AllDayBar, Placed, WeekLayout, week_days, week_start};
 
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
@@ -54,6 +59,14 @@ pub struct Event {
     pub span: Span,
     pub repeats: bool,
     pub cancelled: bool,
+    pub description: String,
+    pub url: Option<String>,
+    /// The series' RRULE, for the editor.
+    pub rule: Option<String>,
+    /// Minutes before the start (see `nixe_eds::Item::alarms`).
+    pub alarms: Vec<i64>,
+    pub organizer: Option<Attendee>,
+    pub attendees: Vec<Attendee>,
 }
 
 impl Event {
@@ -88,7 +101,38 @@ impl Event {
             span,
             repeats: item.repeats,
             cancelled: item.status == nixe_eds::Status::Cancelled,
+            description: item.description.clone(),
+            url: item.url.clone(),
+            rule: item.rule.clone(),
+            alarms: item.alarms.clone(),
+            organizer: item.organizer.clone(),
+            attendees: item.attendees.clone(),
         })
+    }
+
+    /// The days this event covers.
+    pub fn days(&self) -> (NaiveDate, NaiveDate) {
+        match self.span {
+            Span::AllDay { first, last } => (first, last),
+            Span::Timed { start, end } => {
+                // An event ending exactly at midnight doesn't cover the next day.
+                let last = if end > start && end.time() == chrono::NaiveTime::MIN { end.date().pred_opt().unwrap_or(end.date()) } else { end.date() };
+                (start.date(), last.max(start.date()))
+            }
+        }
+    }
+
+    pub fn all_day(&self) -> bool {
+        matches!(self.span, Span::AllDay { .. })
+    }
+
+    /// This user's own attendee line, if they are invited (and not organizing).
+    pub fn invitation<'a>(&'a self, me: &[String]) -> Option<&'a Attendee> {
+        let mine = |email: &str| me.iter().any(|m| m.eq_ignore_ascii_case(email));
+        if self.organizer.as_ref().is_some_and(|o| mine(&o.email)) {
+            return None;
+        }
+        self.attendees.iter().find(|a| mine(&a.email))
     }
 
     /// Sort key: all-day first, then by start.
@@ -147,8 +191,11 @@ mod tests {
             url: None,
             parent: None,
             repeats: false,
+            rule: None,
             has_alarms: false,
-            attendees: 0,
+            alarms: Vec::new(),
+            organizer: None,
+            attendees: Vec::new(),
         }
     }
 

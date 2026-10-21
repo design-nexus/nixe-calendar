@@ -53,10 +53,10 @@ const DAY_MINUTES: u32 = 24 * 60;
 impl WeekLayout {
     /// Lays out `events` (indices refer to it) for the week of `days`.
     /// Timed events of 24 hours or more go across the top with the all-day ones.
-    pub fn new(days: &[NaiveDate; 7], events: &[Event]) -> Self {
+    pub fn new(days: &[NaiveDate], events: &[Event]) -> Self {
         let mut out = WeekLayout::default();
         let mut bars = Vec::new();
-        let mut per_day: [Vec<Placed>; 7] = Default::default();
+        let mut per_day: Vec<Vec<Placed>> = vec![Vec::new(); days.len()];
         for (index, event) in events.iter().enumerate() {
             match event.span {
                 Span::AllDay { first, last } => bars.push((index, first, last)),
@@ -138,10 +138,16 @@ fn finish(cluster: &mut [Placed], columns: u32) {
 }
 
 /// Packs bars into the fewest lanes, longest first.
-fn lanes(days: &[NaiveDate; 7], bars: &mut [(usize, NaiveDate, NaiveDate)], events: &[Event]) -> Vec<AllDayBar> {
-    let (week_first, week_last) = (days[0], days[6]);
+fn lanes(days: &[NaiveDate], bars: &mut [(usize, NaiveDate, NaiveDate)], events: &[Event]) -> Vec<AllDayBar> {
     bars.sort_by_key(|(index, first, last)| (*first, std::cmp::Reverse(*last - *first), events[*index].title.clone()));
-    let mut used: Vec<[bool; 7]> = Vec::new();
+    pack(days, bars)
+}
+
+/// Packs bars, in the order given, into the fewest lanes; bars outside the
+/// week are dropped and the rest clipped to it.
+pub(crate) fn pack(days: &[NaiveDate], bars: &[(usize, NaiveDate, NaiveDate)]) -> Vec<AllDayBar> {
+    let (Some(&week_first), Some(&week_last)) = (days.first(), days.last()) else { return Vec::new() };
+    let mut used: Vec<Vec<bool>> = Vec::new();
     let mut out = Vec::new();
     for (index, first, last) in bars.iter() {
         if *last < week_first || *first > week_last {
@@ -152,7 +158,7 @@ fn lanes(days: &[NaiveDate; 7], bars: &mut [(usize, NaiveDate, NaiveDate)], even
         let lane = match used.iter().position(|row| !row[a..=b].iter().any(|x| *x)) {
             Some(l) => l,
             None => {
-                used.push([false; 7]);
+                used.push(vec![false; days.len()]);
                 used.len() - 1
             }
         };
@@ -180,6 +186,12 @@ mod tests {
             span: Span::Timed { start: d(day).and_hms_opt(h1, m1, 0).unwrap(), end: d(day).and_hms_opt(h2, m2, 0).unwrap() },
             repeats: false,
             cancelled: false,
+            description: String::new(),
+            url: None,
+            rule: None,
+            alarms: Vec::new(),
+            organizer: None,
+            attendees: Vec::new(),
         }
     }
 
