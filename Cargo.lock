@@ -523,7 +523,7 @@ dependencies = [
 [[package]]
 name = "nixe-accounts"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "anyhow",
  "gio",
@@ -542,7 +542,7 @@ dependencies = [
  "gtk4",
  "nixe-accounts",
  "nixe-calendar-core",
- "nixe-core 0.1.0 (git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105)",
+ "nixe-core 0.1.0 (git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631)",
  "nixe-eds",
  "nixe-theme",
  "nixe-ui",
@@ -561,19 +561,7 @@ dependencies = [
 [[package]]
 name = "nixe-camel-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
-
-[[package]]
-name = "nixe-core"
-version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
-dependencies = [
- "anyhow",
- "gtk4",
- "serde",
- "serde_json",
- "toml",
-]
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 
 [[package]]
 name = "nixe-core"
@@ -588,9 +576,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "nixe-core"
+version = "0.1.0"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
+dependencies = [
+ "anyhow",
+ "gtk4",
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
 name = "nixe-ecal-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -605,7 +605,7 @@ dependencies = [
 [[package]]
 name = "nixe-edataserver-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -621,7 +621,7 @@ dependencies = [
 [[package]]
 name = "nixe-eds"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "gio-sys",
  "glib",
@@ -636,7 +636,7 @@ dependencies = [
 [[package]]
 name = "nixe-icalglib-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -648,7 +648,7 @@ dependencies = [
 [[package]]
 name = "nixe-json-glib-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -660,7 +660,7 @@ dependencies = [
 [[package]]
 name = "nixe-libxml2-sys"
 version = "0.1.0"
-source = "git+file:///home/ken/Projects/nixe-core?rev=08587d36ee1811bb196de2107e7ffef8839c6105#08587d36ee1811bb196de2107e7ffef8839c6105"
+source = "git+file:///home/ken/Projects/nixe-core?rev=d292643f683b8970b0291b66363fd8c1e9bb7631#d292643f683b8970b0291b66363fd8c1e9bb7631"
 
 [[package]]
 name = "nixe-theme"

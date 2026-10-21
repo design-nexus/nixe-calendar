@@ -181,7 +181,7 @@ fn ical_day(d: Weekday) -> &'static str {
 
 fn ical_weekday(s: &str) -> Option<Weekday> {
     let i = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"].iter().position(|d| d.eq_ignore_ascii_case(s))?;
-    Some(Weekday::try_from(i as u8).ok()?)
+    Weekday::try_from(i as u8).ok()
 }
 
 fn short(d: Weekday) -> &'static str {
