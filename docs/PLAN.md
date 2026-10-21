@@ -14,21 +14,25 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 
 ## Phases
 
-### 1. Vertical slice
-- [ ] Sidebar (Music construction): calendars from `nixe-eds`, grouped by account, with color and visibility
-- [ ] Read-only week view built from `ECalClient` instances
-- [ ] Status bar: sync state, offline readout, gear
-- [ ] Banners: EDS missing or not answering, GOA missing, account needs sign-in (opens Settings → Online Accounts)
-- [ ] Live check against the connected Google account; offline check with the network down
+### 1. Vertical slice (done)
+- [x] Sidebar (Music construction): calendars from `nixe-eds`, grouped by account, with color and visibility
+- [x] Week view built from `ECalClient` instances
+- [x] Status bar: sync state, offline readout, gear
+- [x] Banners: EDS missing or not answering, account needs sign-in, offline
+- [x] Live check against the connected Google account
+- [ ] Offline check with the network down (needs Ken)
 
-### 2. MVP
-- [ ] Day, month and agenda views; mini-calendar
-- [ ] Create and edit (popover quick edit, full editor in a card); all-day; time zones
-- [ ] Recurrence editor; edit this / this and following / all
-- [ ] Invitations: attendees, RSVP
-- [ ] `nixe-calendard`: reminders through `EReminderWatcher`, notifications, `agenda.sqlite`; stays silent while `evolution-alarm-notify` runs
-- [ ] Search; `.ics` import and export; `text/calendar` handler
-- [ ] Control tools for Assistant
+### 2. MVP (done)
+- [x] Day, month and agenda views; mini-calendar
+- [x] Create (quick create with natural language, and a full editor); all-day; edit
+- [x] Repeat presets and endings; edit this / this and following / all
+- [x] Invitations: organizer, guests and answers; Going / Maybe / Not going
+- [x] `nixe-calendard`: reminders through `EReminderWatcher`, notifications with Snooze and Dismiss, `agenda.sqlite`; quiet while `evolution-alarm-notify` runs
+- [x] Search (this view as you type; Enter searches a year either side)
+- [x] `.ics` import (file picker, command line, Open with) and export
+- [x] Control tools for Assistant
+- [ ] Time zone choice per event (events are written in the local zone)
+- [ ] Moving an event to another calendar
 
 ### 3. Advanced
 - [ ] Year view
