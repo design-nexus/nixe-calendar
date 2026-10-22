@@ -108,11 +108,6 @@ fn civil(days: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
-fn ymd(days: i64) -> String {
-    let (y, m, d) = civil(days);
-    format!("{y:04}-{m:02}-{d:02}")
-}
-
 fn days_of(ymd: &str) -> Option<i64> {
     let mut parts = ymd.splitn(3, '-').map(|p| p.parse::<i64>().ok());
     let (y, m, d) = (parts.next()??, parts.next()??, parts.next()??);
@@ -275,6 +270,11 @@ fn hits(db: &Connection, what: Asked, now: i64, limit: usize) -> Result<Vec<Hit>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ymd(days: i64) -> String {
+        let (y, m, d) = civil(days);
+        format!("{y:04}-{m:02}-{d:02}")
+    }
 
     #[test]
     fn what_was_asked_and_dates() {
