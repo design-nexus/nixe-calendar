@@ -55,7 +55,13 @@ fn due_alert_becomes_a_notification_and_the_agenda_is_written() {
         })
         .build()
         .unwrap();
-    let _name = gio::bus_own_name_on_connection(&conn, "org.freedesktop.Notifications", gio::BusNameOwnerFlags::NONE, |_, _| {}, |_, _| {});
+    let _name = gio::bus_own_name_on_connection(
+        &conn,
+        "org.freedesktop.Notifications",
+        gio::BusNameOwnerFlags::NONE,
+        |_, _| {},
+        |_, _| {},
+    );
 
     let registry = Registry::connect().unwrap();
     let cal = Calendar::open(&registry, "system-calendar", Kind::Calendar, None).unwrap();

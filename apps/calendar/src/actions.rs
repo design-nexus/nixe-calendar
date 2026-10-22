@@ -131,7 +131,8 @@ pub fn respond(event: &Event, response: Response) {
 /// Saves an event (with its changed occurrences and time zones) as an .ics file.
 pub fn export(event: &Event) {
     let Some(parent) = window::window() else { return };
-    let dialog = gtk::FileDialog::builder().title("Export event").initial_name(format!("{}.ics", safe_name(&event.title))).build();
+    let dialog =
+        gtk::FileDialog::builder().title("Export event").initial_name(format!("{}.ics", safe_name(&event.title))).build();
     let event = event.clone();
     dialog.save(Some(&parent), gtk::gio::Cancellable::NONE, move |file| {
         let Some(path) = file.ok().and_then(|f| f.path()) else { return };
@@ -217,7 +218,8 @@ pub fn import_file(path: &std::path::Path) {
 /// "This event / This and following / All events" for a repeating event.
 fn ask_scope(title: &str, verb: &str, then: impl Fn(Scope) + 'static) {
     let (dialog, card) = widgets::dialog(title, 480);
-    let note = widgets::label(&format!("{verb} only this occurrence, this one and the ones after it, or every occurrence?"), "dim");
+    let note =
+        widgets::label(&format!("{verb} only this occurrence, this one and the ones after it, or every occurrence?"), "dim");
     note.set_xalign(0.0);
     note.set_wrap(true);
     card.append(&note);
@@ -230,7 +232,9 @@ fn ask_scope(title: &str, verb: &str, then: impl Fn(Scope) + 'static) {
     let d = dialog.clone();
     cancel.connect_clicked(move |_| d.close());
     buttons.append(&cancel);
-    for (label, scope) in [("This event", Scope::This), ("This and following", Scope::ThisAndFollowing), ("All events", Scope::All)] {
+    for (label, scope) in
+        [("This event", Scope::This), ("This and following", Scope::ThisAndFollowing), ("All events", Scope::All)]
+    {
         let button = gtk::Button::with_label(label);
         if scope == Scope::This {
             button.add_css_class("suggested-action");

@@ -114,7 +114,15 @@ fn draw_mini(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d: &
         for (i, day) in first.iter().enumerate() {
             draw::set(cr, c.dim);
             let letter: String = day.format("%a").to_string().chars().take(2).collect();
-            draw::text(area, cr, &letter, i as f64 * cw, 2.0, cw, Style { scale: 0.72, bold: true, center: true, ..draw::NORMAL });
+            draw::text(
+                area,
+                cr,
+                &letter,
+                i as f64 * cw,
+                2.0,
+                cw,
+                Style { scale: 0.72, bold: true, center: true, ..draw::NORMAL },
+            );
         }
     }
     let (from, to) = d.range;

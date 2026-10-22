@@ -146,7 +146,15 @@ fn draw_month(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, hei
                 draw::set(cr, if other_month { c.dim } else { c.text });
             }
             let label = if day.day() == 1 { day.format("%b %-d").to_string() } else { day.day().to_string() };
-            draw::text(area, cr, &label, x + 9.0, top + 5.0, cw - 14.0, Style { scale: 0.92, bold: *day == today, ..draw::NORMAL });
+            draw::text(
+                area,
+                cr,
+                &label,
+                x + 9.0,
+                top + 5.0,
+                cw - 14.0,
+                Style { scale: 0.92, bold: *day == today, ..draw::NORMAL },
+            );
             d.day_hits.push((x, top, cw.min(60.0), DAY_LABEL, *day));
         }
         // Bars that fit; one lane is kept for "+N more" when some don't.
@@ -171,7 +179,15 @@ fn draw_month(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, hei
                 draw::rounded(cr, x, y, w, h, 4.0);
                 let _ = cr.fill();
                 draw::set(cr, c.text);
-                draw::text(area, cr, &event.title, x + 6.0, y + 1.0, w - 10.0, Style { scale: 0.84, strike: event.cancelled, ..draw::NORMAL });
+                draw::text(
+                    area,
+                    cr,
+                    &event.title,
+                    x + 6.0,
+                    y + 1.0,
+                    w - 10.0,
+                    Style { scale: 0.84, strike: event.cancelled, ..draw::NORMAL },
+                );
             } else {
                 draw::set(cr, color);
                 cr.arc(x + 6.0, y + h / 2.0, 3.5, 0.0, std::f64::consts::TAU);
@@ -198,7 +214,15 @@ fn draw_month(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, hei
             let x = i as f64 * cw;
             let y = top + DAY_LABEL + usable as f64 * BAR;
             draw::set(cr, c.dim);
-            draw::text(area, cr, &format!("+{count} more"), x + 9.0, y + 1.0, cw - 14.0, Style { scale: 0.8, bold: true, ..draw::NORMAL });
+            draw::text(
+                area,
+                cr,
+                &format!("+{count} more"),
+                x + 9.0,
+                y + 1.0,
+                cw - 14.0,
+                Style { scale: 0.8, bold: true, ..draw::NORMAL },
+            );
             d.day_hits.push((x, y, cw, BAR, row[i]));
         }
     }

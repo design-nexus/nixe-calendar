@@ -43,7 +43,8 @@ impl Default for Prefs {
 
 /// The region of the time locale ("US" in en_US.UTF-8).
 fn region() -> String {
-    let locale = ["LC_ALL", "LC_TIME", "LANG"].iter().find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty())).unwrap_or_default();
+    let locale =
+        ["LC_ALL", "LC_TIME", "LANG"].iter().find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty())).unwrap_or_default();
     locale.split(['.', '@']).next().unwrap_or("").rsplit('_').next().unwrap_or("").to_string()
 }
 

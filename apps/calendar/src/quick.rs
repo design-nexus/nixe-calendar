@@ -36,10 +36,13 @@ fn plan(text: &str, parse: &Parse, slot: Option<Slot>) -> Plan {
             let end = parse.ends().filter(|e| *e > start).unwrap_or(start + Duration::hours(1));
             Span::Timed { start, end }
         }
-        (None, Some(Slot::At(at))) if parse.date.is_none() => Span::Timed { start: at, end: at + parse.duration.unwrap_or(Duration::hours(1)) },
+        (None, Some(Slot::At(at))) if parse.date.is_none() => {
+            Span::Timed { start: at, end: at + parse.duration.unwrap_or(Duration::hours(1)) }
+        }
         _ => Span::AllDay { first: day, last: day },
     };
-    let title = if parse.title.trim().is_empty() && !parse.found() { text.trim().to_string() } else { parse.title.trim().to_string() };
+    let title =
+        if parse.title.trim().is_empty() && !parse.found() { text.trim().to_string() } else { parse.title.trim().to_string() };
     Plan { title: if title.is_empty() { "Untitled".into() } else { title }, span, repeat: parse.repeat.clone() }
 }
 
@@ -59,7 +62,8 @@ fn describe(plan: &Plan) -> String {
 /// Opens quick create pointing at `rect` on `parent`. `slot` is where the user
 /// double-clicked, if they did.
 pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>) {
-    let writable: Vec<(String, String)> = window::calendars().into_iter().filter(|c| !c.read_only).map(|c| (c.uid, c.name)).collect();
+    let writable: Vec<(String, String)> =
+        window::calendars().into_iter().filter(|c| !c.read_only).map(|c| (c.uid, c.name)).collect();
     if writable.is_empty() {
         window::toast("There's no calendar to add events to. Add an account in Settings → Online Accounts.");
         return;
@@ -107,7 +111,11 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
             };
             let parse = nixe_when::parse(text, now);
             let main = plan(text, &parse, slot);
-            preview.set_text(&if text.trim().is_empty() { String::new() } else { format!("{} · {}", main.title, describe(&main)) });
+            preview.set_text(&if text.trim().is_empty() {
+                String::new()
+            } else {
+                format!("{} · {}", main.title, describe(&main))
+            });
             *chosen.borrow_mut() = Some(main.clone());
             while let Some(child) = chips.first_child() {
                 chips.remove(&child);
@@ -168,7 +176,9 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
             let plan = chosen.borrow().clone();
             popover.popdown();
             let start = match plan {
-                Some(p) if !entry.text().trim().is_empty() => editor::Start { title: p.title, span: Some(p.span), repeat: p.repeat, calendar: None },
+                Some(p) if !entry.text().trim().is_empty() => {
+                    editor::Start { title: p.title, span: Some(p.span), repeat: p.repeat, calendar: None }
+                }
                 _ => slot.map(editor::start_at).unwrap_or_default(),
             };
             editor::open(None, Some(start));

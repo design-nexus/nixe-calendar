@@ -166,7 +166,7 @@ else
   dirs=(crates bin)
   for a in "${apps[@]}"; do app_info "$a"; dirs+=("apps/$dir"); done
   # Their Glimpse plugins build alongside them (see the Build step).
-  for a in news capture pulse; do
+  for a in news capture pulse calendar; do
     if [[ " ${apps[*]} " == *" $a "* ]]; then dirs+=("apps/$a-glimpse"); fi
   done
   src="$work/src"
@@ -185,7 +185,7 @@ if [[ $prebuilt == false ]]; then
   for a in "${apps[@]}"; do app_info "$a"; pkgs+=(-p "$pkg"); done
   if [[ " ${apps[*]} " == *" settings "* ]]; then pkgs+=(-p nixe-goa-helper); fi
   if [[ " ${apps[*]} " == *" news "* ]]; then pkgs+=(-p nixe-news-glimpse); fi
-  if [[ " ${apps[*]} " == *" calendar "* ]]; then pkgs+=(-p nixe-calendard); fi
+  if [[ " ${apps[*]} " == *" calendar "* ]]; then pkgs+=(-p nixe-calendard -p nixe-calendar-glimpse); fi
   if [[ " ${apps[*]} " == *" capture "* ]]; then pkgs+=(-p nixe-capture-glimpse); fi
   if [[ " ${apps[*]} " == *" pulse "* ]]; then pkgs+=(-p nixe-pulse-glimpse); fi
   if [[ " ${apps[*]} " == *" pulse "* ]]; then "$src/apps/pulse/packaging/prepare-native.sh"; fi
@@ -228,6 +228,12 @@ for a in "${apps[@]}"; do
     mkdir -p "$plug"
     install -m 755 "${CARGO_TARGET_DIR:-$src/target}/release/nixe-news-glimpse" "$plug/nixe-news-glimpse"
     install -m 644 "$src/apps/news-glimpse/plugin.toml" "$plug/plugin.toml"
+  fi
+  if [[ $a == calendar && -f ${CARGO_TARGET_DIR:-$src/target}/release/nixe-calendar-glimpse ]]; then
+    plug="$share/nixe-calendar/glimpse"
+    mkdir -p "$plug"
+    install -m 755 "${CARGO_TARGET_DIR:-$src/target}/release/nixe-calendar-glimpse" "$plug/nixe-calendar-glimpse"
+    install -m 644 "$src/apps/calendar-glimpse/plugin.toml" "$plug/plugin.toml"
   fi
   if [[ $a == capture && -f ${CARGO_TARGET_DIR:-$src/target}/release/nixe-capture-glimpse ]]; then
     plug="$share/nixe-capture/glimpse"

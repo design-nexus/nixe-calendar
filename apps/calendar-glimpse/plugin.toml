@@ -1,0 +1,12 @@
+id = "nixe-calendar"
+name = "Calendar"
+version = "0.1.0"
+api_version = 1
+exec = ["./nixe-calendar-glimpse"]
+capabilities = ["search", "preview"]
+description = "Your agenda from Calendar. Try today, tomorrow, calendar, next meeting, or words from an event."
+
+[permissions]
+network = false
+selected_sources = false
+read = []

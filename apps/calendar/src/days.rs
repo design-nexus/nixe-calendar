@@ -64,7 +64,8 @@ impl DaysView {
             click.connect_pressed(move |gesture, n, x, y| {
                 let d = d.borrow();
                 let hits = if top { &d.header_hits } else { &d.grid_hits };
-                let hit = hits.iter().rev().find(|(hx, hy, hw, hh, _)| x >= *hx && x <= hx + hw && y >= *hy && y <= hy + hh).copied();
+                let hit =
+                    hits.iter().rev().find(|(hx, hy, hw, hh, _)| x >= *hx && x <= hx + hw && y >= *hy && y <= hy + hh).copied();
                 let col = column_width(target.width() as f64, d.days.len());
                 let day = ((x - GUTTER) / col).floor();
                 match hit {
@@ -187,7 +188,15 @@ fn draw_header(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d:
         draw::rounded(cr, x, y, w, h, 4.0);
         let _ = cr.fill();
         draw::set(cr, c.text);
-        draw::text(area, cr, &event.title, x + 6.0, y + 1.0, w - 10.0, Style { scale: 0.86, strike: event.cancelled, ..draw::NORMAL });
+        draw::text(
+            area,
+            cr,
+            &event.title,
+            x + 6.0,
+            y + 1.0,
+            w - 10.0,
+            Style { scale: 0.86, strike: event.cancelled, ..draw::NORMAL },
+        );
         d.header_hits.push((x, y, w, h, bar.event));
     }
 }
@@ -242,7 +251,15 @@ fn draw_grid(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d: &
         cr.rectangle(x, y, w, h);
         cr.clip();
         draw::set(cr, c.text);
-        let used = draw::text(area, cr, &event.title, x + 8.0, y + 2.0, w - 12.0, Style { scale: 0.86, bold: true, strike: event.cancelled, ..draw::NORMAL });
+        let used = draw::text(
+            area,
+            cr,
+            &event.title,
+            x + 8.0,
+            y + 2.0,
+            w - 12.0,
+            Style { scale: 0.86, bold: true, strike: event.cancelled, ..draw::NORMAL },
+        );
         if h > used + 14.0 {
             draw::set(cr, c.dim);
             let when = match event.span {

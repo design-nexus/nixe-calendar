@@ -76,7 +76,9 @@ pub fn handle(name: &str, args: Value, reply: Reply) {
                 move || worker::events_between(date, date + Duration::days(1)),
                 move |events| {
                     let slots = free_slots(&events, date, from_hour, to_hour, minutes);
-                    reply(Ok(json!({ "date": date.to_string(), "free": slots.iter().map(|(a, b)| json!({"start": a.format("%H:%M").to_string(), "end": b.format("%H:%M").to_string()})).collect::<Vec<_>>() })));
+                    reply(Ok(
+                        json!({ "date": date.to_string(), "free": slots.iter().map(|(a, b)| json!({"start": a.format("%H:%M").to_string(), "end": b.format("%H:%M").to_string()})).collect::<Vec<_>>() }),
+                    ));
                 },
             );
         }
@@ -173,7 +175,9 @@ fn events_reply(from: NaiveDate, to: NaiveDate, reply: Reply, pick: impl FnOnce(
 fn event_json(e: &Event, names: &[(String, String)]) -> Value {
     let (start, end, all_day) = match e.span {
         Span::AllDay { first, last } => (first.to_string(), last.to_string(), true),
-        Span::Timed { start, end } => (start.format("%Y-%m-%dT%H:%M").to_string(), end.format("%Y-%m-%dT%H:%M").to_string(), false),
+        Span::Timed { start, end } => {
+            (start.format("%Y-%m-%dT%H:%M").to_string(), end.format("%Y-%m-%dT%H:%M").to_string(), false)
+        }
     };
     let notes: String = e.description.chars().take(500).collect();
     json!({
@@ -226,7 +230,11 @@ fn span_args(args: &Value) -> Result<Option<Span>, String> {
 /// Gaps of at least `minutes` between `from_hour` and `to_hour` on `date`.
 fn free_slots(events: &[Event], date: NaiveDate, from_hour: u32, to_hour: u32, minutes: i64) -> Vec<(NaiveTime, NaiveTime)> {
     let day_start = date.and_hms_opt(from_hour, 0, 0).unwrap_or_default();
-    let day_end = if to_hour >= 24 { (date + Duration::days(1)).and_time(NaiveTime::MIN) } else { date.and_hms_opt(to_hour, 0, 0).unwrap_or_default() };
+    let day_end = if to_hour >= 24 {
+        (date + Duration::days(1)).and_time(NaiveTime::MIN)
+    } else {
+        date.and_hms_opt(to_hour, 0, 0).unwrap_or_default()
+    };
     let mut busy: Vec<(NaiveDateTime, NaiveDateTime)> = events
         .iter()
         .filter(|e| !e.cancelled)
@@ -282,7 +290,12 @@ mod tests {
     #[test]
     fn finds_gaps_in_working_hours() {
         let day = NaiveDate::from_ymd_opt(2026, 10, 22).unwrap();
-        let events = vec![event(at(8, 0), at(9, 30)), event(at(11, 0), at(12, 0)), event(at(11, 30), at(13, 0)), event(at(16, 45), at(18, 0))];
+        let events = vec![
+            event(at(8, 0), at(9, 30)),
+            event(at(11, 0), at(12, 0)),
+            event(at(11, 30), at(13, 0)),
+            event(at(16, 45), at(18, 0)),
+        ];
         let t = |h, m| NaiveTime::from_hms_opt(h, m, 0).unwrap();
         assert_eq!(free_slots(&events, day, 9, 17, 30), vec![(t(9, 30), t(11, 0)), (t(13, 0), t(16, 45))]);
         assert_eq!(free_slots(&events, day, 9, 17, 120), vec![(t(13, 0), t(16, 45))]);

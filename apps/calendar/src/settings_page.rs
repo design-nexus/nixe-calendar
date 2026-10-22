@@ -68,13 +68,10 @@ fn week(page: &Page) {
         },
     ));
     let hours: Vec<(String, String)> = (0..=12).map(|h| (h.to_string(), format!("{h}:00"))).collect();
-    let (row, _) = widgets::choice_row(
-        "Scroll to",
-        "The hour the week opens on.",
-        hours,
-        &prefs.day_starts.to_string(),
-        |hour| prefs::update(|p| p.day_starts = hour.parse().unwrap_or(8)),
-    );
+    let (row, _) =
+        widgets::choice_row("Scroll to", "The hour the week opens on.", hours, &prefs.day_starts.to_string(), |hour| {
+            prefs::update(|p| p.day_starts = hour.parse().unwrap_or(8))
+        });
     group.add(&row);
 }
 

@@ -46,8 +46,14 @@ impl CalendarInfo {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Span {
     /// Whole days, `first` to `last` inclusive.
-    AllDay { first: NaiveDate, last: NaiveDate },
-    Timed { start: NaiveDateTime, end: NaiveDateTime },
+    AllDay {
+        first: NaiveDate,
+        last: NaiveDate,
+    },
+    Timed {
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    },
 }
 
 /// One occurrence of an event, ready to show.
@@ -118,7 +124,11 @@ impl Event {
             Span::AllDay { first, last } => (first, last),
             Span::Timed { start, end } => {
                 // An event ending exactly at midnight doesn't cover the next day.
-                let last = if end > start && end.time() == chrono::NaiveTime::MIN { end.date().pred_opt().unwrap_or(end.date()) } else { end.date() };
+                let last = if end > start && end.time() == chrono::NaiveTime::MIN {
+                    end.date().pred_opt().unwrap_or(end.date())
+                } else {
+                    end.date()
+                };
                 (start.date(), last.max(start.date()))
             }
         }
@@ -166,7 +176,9 @@ pub fn timestamp(at: NaiveDateTime) -> i64 {
 pub fn timestamp_in<Tz: TimeZone>(at: NaiveDateTime, tz: &Tz) -> i64 {
     match tz.from_local_datetime(&at) {
         chrono::LocalResult::Single(t) | chrono::LocalResult::Ambiguous(t, _) => t.timestamp(),
-        chrono::LocalResult::None => tz.from_local_datetime(&(at + chrono::Duration::hours(1))).earliest().map_or(0, |t| t.timestamp()),
+        chrono::LocalResult::None => {
+            tz.from_local_datetime(&(at + chrono::Duration::hours(1))).earliest().map_or(0, |t| t.timestamp())
+        }
     }
 }
 
@@ -231,8 +243,11 @@ mod tests {
 
     #[test]
     fn all_day_end_is_exclusive() {
-        let e = Event::from_item("c", &item(When::Date { year: 2026, month: 12, day: 24 }, Some(When::Date { year: 2026, month: 12, day: 26 })))
-            .unwrap();
+        let e = Event::from_item(
+            "c",
+            &item(When::Date { year: 2026, month: 12, day: 24 }, Some(When::Date { year: 2026, month: 12, day: 26 })),
+        )
+        .unwrap();
         let d = |day| NaiveDate::from_ymd_opt(2026, 12, day).unwrap();
         assert_eq!(e.span, Span::AllDay { first: d(24), last: d(25) });
     }

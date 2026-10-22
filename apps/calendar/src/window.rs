@@ -147,7 +147,11 @@ pub fn default_calendar() -> String {
     if list.iter().any(|c| c.uid == last && !c.read_only) {
         return last;
     }
-    list.iter().find(|c| c.selected && !c.read_only).or_else(|| list.iter().find(|c| !c.read_only)).map(|c| c.uid.clone()).unwrap_or_default()
+    list.iter()
+        .find(|c| c.selected && !c.read_only)
+        .or_else(|| list.iter().find(|c| !c.read_only))
+        .map(|c| c.uid.clone())
+        .unwrap_or_default()
 }
 
 pub fn remember_calendar(uid: &str) {
@@ -271,7 +275,12 @@ fn filtered(events: &[Event], query: &str) -> Vec<Event> {
     let q = query.trim().to_lowercase();
     events
         .iter()
-        .filter(|e| q.is_empty() || e.title.to_lowercase().contains(&q) || e.location.to_lowercase().contains(&q) || e.description.to_lowercase().contains(&q))
+        .filter(|e| {
+            q.is_empty()
+                || e.title.to_lowercase().contains(&q)
+                || e.location.to_lowercase().contains(&q)
+                || e.description.to_lowercase().contains(&q)
+        })
         .cloned()
         .collect()
 }
@@ -489,7 +498,8 @@ fn refresh_status() {
 
 pub fn open_online_accounts() {
     let settings = nixe_accounts::find_bin("nixe-settings");
-    let started = settings.is_some_and(|bin| std::process::Command::new(bin).args(["--section", "online-accounts"]).spawn().is_ok());
+    let started =
+        settings.is_some_and(|bin| std::process::Command::new(bin).args(["--section", "online-accounts"]).spawn().is_ok());
     if !started && nixe_accounts::open_management().is_err() {
         toast("Install Nixe Settings or gnome-online-accounts-gtk to add accounts.");
     }
@@ -714,20 +724,34 @@ fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
     add.connect_clicked(|_| new_event());
     let reload = widgets::icon_button("view-refresh-symbolic", "Refresh (R)");
     reload.connect_clicked(|_| refresh());
-    for w in [prev.upcast_ref::<gtk::Widget>(), today.upcast_ref(), next.upcast_ref(), title.upcast_ref(), switcher.upcast_ref(), add.upcast_ref(), reload.upcast_ref()] {
+    for w in [
+        prev.upcast_ref::<gtk::Widget>(),
+        today.upcast_ref(),
+        next.upcast_ref(),
+        title.upcast_ref(),
+        switcher.upcast_ref(),
+        add.upcast_ref(),
+        reload.upcast_ref(),
+    ] {
         bar.append(w);
     }
     (bar, title, switcher, add)
 }
 
 fn build(app: &gtk::Application) {
-    let window = gtk::ApplicationWindow::builder().application(app).title("Calendar").default_width(1120).default_height(800).build();
+    let window =
+        gtk::ApplicationWindow::builder().application(app).title("Calendar").default_width(1120).default_height(800).build();
     window.add_css_class("calendar-window");
     window.set_titlebar(Some(&gtk::Box::new(gtk::Orientation::Horizontal, 0)));
     window.set_icon_name(Some("io.github.design_nexus.nixe.Calendar"));
     nixe_ui::keys::install(
         &window,
-        nixe_ui::keys::Common { settings: Some(settings_dialog::open), shortcuts: Some(show_shortcuts), close: true, ..Default::default() },
+        nixe_ui::keys::Common {
+            settings: Some(settings_dialog::open),
+            shortcuts: Some(show_shortcuts),
+            close: true,
+            ..Default::default()
+        },
     );
 
     let nav = gtk::Box::new(gtk::Orientation::Vertical, 0);

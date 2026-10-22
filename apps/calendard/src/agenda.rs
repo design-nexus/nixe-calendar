@@ -7,7 +7,8 @@
 //! ```sql
 //! events(calendar, calendar_name, color, uid, rid, title, location, description, url,
 //!        starts INTEGER, ends INTEGER, all_day INTEGER, first_day TEXT, last_day TEXT)
-//! meta(key PRIMARY KEY, value)   -- written_at (Unix seconds)
+//! meta(key PRIMARY KEY, value)   -- written_at (Unix seconds), utc_offset (local
+//!                                  seconds east of UTC then; for sandboxed readers)
 //! ```
 //!
 //! `starts`/`ends` are Unix seconds (an all-day event runs from local midnight of
@@ -74,6 +75,8 @@ pub fn write(path: &Path, calendars: &[CalendarInfo], events: &[Event], now: i64
                 ])?;
             }
             tx.execute("INSERT INTO meta (key, value) VALUES ('written_at', ?1)", params![now.to_string()])?;
+            let offset = chrono::Local::now().offset().local_minus_utc();
+            tx.execute("INSERT INTO meta (key, value) VALUES ('utc_offset', ?1)", params![offset.to_string()])?;
         }
         tx.commit()?;
     }
@@ -122,7 +125,11 @@ mod tests {
             read_only: false,
         }];
         let events = vec![
-            event("Standup", Span::Timed { start: d.and_hms_opt(9, 0, 0).unwrap(), end: d.and_hms_opt(9, 15, 0).unwrap() }, false),
+            event(
+                "Standup",
+                Span::Timed { start: d.and_hms_opt(9, 0, 0).unwrap(), end: d.and_hms_opt(9, 15, 0).unwrap() },
+                false,
+            ),
             event("Holiday", Span::AllDay { first: d, last: d }, false),
             event("Gone", Span::AllDay { first: d, last: d }, true),
         ];
@@ -132,12 +139,17 @@ mod tests {
         let db = Connection::open(&path).unwrap();
         let count: i64 = db.query_row("SELECT count(*) FROM events", [], |r| r.get(0)).unwrap();
         assert_eq!(count, 2);
-        let (name, all_day, first): (String, bool, String) =
-            db.query_row("SELECT calendar_name, all_day, first_day FROM events WHERE title = 'Holiday'", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        let (name, all_day, first): (String, bool, String) = db
+            .query_row("SELECT calendar_name, all_day, first_day FROM events WHERE title = 'Holiday'", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+            .unwrap();
         assert_eq!((name.as_str(), all_day, first.as_str()), ("Work", true, "2026-10-22"));
         let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
         assert_eq!(version, 1);
         let written: String = db.query_row("SELECT value FROM meta WHERE key = 'written_at'", [], |r| r.get(0)).unwrap();
+        let offset: String = db.query_row("SELECT value FROM meta WHERE key = 'utc_offset'", [], |r| r.get(0)).unwrap();
+        assert!(offset.parse::<i32>().is_ok_and(|o| o.abs() <= 14 * 3600));
         assert_eq!(written, "43");
         let _ = std::fs::remove_dir_all(dir);
     }

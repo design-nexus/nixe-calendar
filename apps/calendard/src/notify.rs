@@ -77,9 +77,13 @@ impl Notifier {
 
     pub fn show(&self, reminder: Reminder) {
         let Some(conn) = &self.conn else { return };
-        let summary = if reminder.item.summary.trim().is_empty() { "Untitled".to_string() } else { reminder.item.summary.clone() };
+        let summary =
+            if reminder.item.summary.trim().is_empty() { "Untitled".to_string() } else { reminder.item.summary.clone() };
         let body = body(&reminder, Local::now().timestamp());
-        let actions: Vec<String> = ["default", "Open", "open", "Open", "snooze", "Snooze 10 min", "dismiss", "Dismiss"].iter().map(|s| s.to_string()).collect();
+        let actions: Vec<String> = ["default", "Open", "open", "Open", "snooze", "Snooze 10 min", "dismiss", "Dismiss"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         let mut hints: HashMap<String, glib::Variant> = HashMap::new();
         hints.insert("desktop-entry".into(), ICON.to_variant());
         hints.insert("urgency".into(), 1u8.to_variant());
@@ -133,7 +137,8 @@ fn body(reminder: &Reminder, now: i64) -> String {
 
 /// A 12-hour clock where the locale uses one (as the Calendar window does).
 fn twelve_hour() -> bool {
-    let locale = ["LC_ALL", "LC_TIME", "LANG"].iter().find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty())).unwrap_or_default();
+    let locale =
+        ["LC_ALL", "LC_TIME", "LANG"].iter().find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty())).unwrap_or_default();
     let region = locale.split(['.', '@']).next().unwrap_or("").rsplit('_').next().unwrap_or("").to_string();
     ["US", "CA", "AU", "NZ", "IN", "PH", "PK", "EG", "SA"].contains(&region.as_str())
 }

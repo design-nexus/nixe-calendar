@@ -106,7 +106,16 @@ pub fn text(area: &impl IsA<gtk::Widget>, cr: &gtk::cairo::Context, s: &str, x: 
 
 /// Draws one ellipsized line of Pango markup.
 #[allow(clippy::too_many_arguments)]
-pub fn markup(area: &impl IsA<gtk::Widget>, cr: &gtk::cairo::Context, markup: &str, x: f64, y: f64, w: f64, scale: f64, strike: bool) {
+pub fn markup(
+    area: &impl IsA<gtk::Widget>,
+    cr: &gtk::cairo::Context,
+    markup: &str,
+    x: f64,
+    y: f64,
+    w: f64,
+    scale: f64,
+    strike: bool,
+) {
     let layout = area.create_pango_layout(None);
     layout.set_markup(markup);
     let attrs = layout.attributes().unwrap_or_default();

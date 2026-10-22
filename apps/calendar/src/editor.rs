@@ -54,7 +54,9 @@ impl DateField {
         button.add_css_class("date-field");
         button.set_label(&date.get().format("%a, %b %-d, %Y").to_string());
         let calendar = gtk::Calendar::new();
-        if let Ok(dt) = glib::DateTime::from_local(date.get().year(), date.get().month() as i32, date.get().day() as i32, 0, 0, 0.0) {
+        if let Ok(dt) =
+            glib::DateTime::from_local(date.get().year(), date.get().month() as i32, date.get().day() as i32, 0, 0, 0.0)
+        {
             calendar.select_day(&dt);
         }
         let popover = gtk::Popover::new();
@@ -120,10 +122,21 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     let event = event.cloned();
     let start = start.unwrap_or_default();
     let now = Local::now().naive_local();
-    let default_start = NaiveDateTime::new(now.date(), NaiveTime::from_hms_opt((now.hour() + 1).min(23), 0, 0).unwrap_or_default());
-    let span = event.as_ref().map(|e| e.span).or(start.span).unwrap_or(Span::Timed { start: default_start, end: default_start + Duration::hours(1) });
+    let default_start =
+        NaiveDateTime::new(now.date(), NaiveTime::from_hms_opt((now.hour() + 1).min(23), 0, 0).unwrap_or_default());
+    let span = event
+        .as_ref()
+        .map(|e| e.span)
+        .or(start.span)
+        .unwrap_or(Span::Timed { start: default_start, end: default_start + Duration::hours(1) });
     let (mut from_date, mut to_date, from_time, to_time, all_day) = match span {
-        Span::AllDay { first, last } => (first, last, NaiveTime::from_hms_opt(9, 0, 0).unwrap_or_default(), NaiveTime::from_hms_opt(10, 0, 0).unwrap_or_default(), true),
+        Span::AllDay { first, last } => (
+            first,
+            last,
+            NaiveTime::from_hms_opt(9, 0, 0).unwrap_or_default(),
+            NaiveTime::from_hms_opt(10, 0, 0).unwrap_or_default(),
+            true,
+        ),
         Span::Timed { start, end } => (start.date(), end.date(), start.time(), end.time(), false),
     };
     if to_date < from_date {
@@ -133,7 +146,8 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         from_date = to_date;
     }
 
-    let writable: Vec<(String, String)> = window::calendars().into_iter().filter(|c| !c.read_only).map(|c| (c.uid, c.name)).collect();
+    let writable: Vec<(String, String)> =
+        window::calendars().into_iter().filter(|c| !c.read_only).map(|c| (c.uid, c.name)).collect();
     if writable.is_empty() {
         window::toast("There's no calendar to add events to.");
         return;
@@ -148,7 +162,8 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     title.set_text(event.as_ref().map(|e| e.title.as_str()).unwrap_or(&start.title));
     card.append(&title);
 
-    let current_calendar = event.as_ref().map(|e| e.calendar.clone()).or(start.calendar.clone()).unwrap_or_else(window::default_calendar);
+    let current_calendar =
+        event.as_ref().map(|e| e.calendar.clone()).or(start.calendar.clone()).unwrap_or_else(window::default_calendar);
     let calendar = widgets::dropdown(&writable, &current_calendar);
     if calendar.selected() == gtk::INVALID_LIST_POSITION {
         calendar.set_selected(0);
@@ -209,13 +224,17 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         match repeats.iter().find(|(_, _, r)| r.is_some() && *r == base) {
             Some((id, _, _)) => current_repeat = id.clone(),
             None => {
-                let label = parsed.as_ref().map(|r| Repeat { ends: Ends::Never, ..r.clone() }.describe(from_date)).unwrap_or_else(|| "Custom".into());
+                let label = parsed
+                    .as_ref()
+                    .map(|r| Repeat { ends: Ends::Never, ..r.clone() }.describe(from_date))
+                    .unwrap_or_else(|| "Custom".into());
                 repeats.push(("custom".into(), label, base));
                 current_repeat = "custom".into();
             }
         }
     }
-    let repeat_choice = widgets::dropdown(&repeats.iter().map(|(id, l, _)| (id.clone(), l.clone())).collect::<Vec<_>>(), &current_repeat);
+    let repeat_choice =
+        widgets::dropdown(&repeats.iter().map(|(id, l, _)| (id.clone(), l.clone())).collect::<Vec<_>>(), &current_repeat);
     card.append(&labeled("Repeat", &repeat_choice));
 
     let ends_options = widgets::opts(&[("never", "Forever"), ("count", "This many times"), ("until", "Until a date")]);
@@ -235,7 +254,8 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     let ends_line = labeled("Until", &ends_row);
     card.append(&ends_line);
     {
-        let (spin, until, line, repeat) = (count_spin.clone(), until_date.button.clone(), ends_line.clone(), repeat_choice.clone());
+        let (spin, until, line, repeat) =
+            (count_spin.clone(), until_date.button.clone(), ends_line.clone(), repeat_choice.clone());
         let update = Rc::new(move |ends: u32, repeat_index: u32| {
             line.set_visible(repeat_index != 0);
             spin.set_visible(ends == 1);

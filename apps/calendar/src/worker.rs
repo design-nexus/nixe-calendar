@@ -18,7 +18,12 @@ pub enum Update {
     Calendars(Vec<CalendarInfo>),
     /// The user's own addresses, for finding them among attendees.
     Identities(Vec<String>),
-    Events { from: NaiveDate, to: NaiveDate, events: Vec<Event>, problems: Vec<String> },
+    Events {
+        from: NaiveDate,
+        to: NaiveDate,
+        events: Vec<Event>,
+        problems: Vec<String>,
+    },
 }
 
 #[derive(Default)]

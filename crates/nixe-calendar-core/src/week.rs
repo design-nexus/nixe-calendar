@@ -61,7 +61,8 @@ impl WeekLayout {
             match event.span {
                 Span::AllDay { first, last } => bars.push((index, first, last)),
                 Span::Timed { start, end } if end - start >= Duration::hours(24) => {
-                    let last = if end.time() == NaiveTime::MIN { end.date().pred_opt().unwrap_or(end.date()) } else { end.date() };
+                    let last =
+                        if end.time() == NaiveTime::MIN { end.date().pred_opt().unwrap_or(end.date()) } else { end.date() };
                     bars.push((index, start.date(), last));
                 }
                 Span::Timed { start, end } => {
@@ -234,7 +235,10 @@ mod tests {
         let layout = WeekLayout::new(&days, &[late]);
         assert_eq!(layout.timed.len(), 2);
         assert_eq!((layout.timed[0].top, layout.timed[0].bottom, layout.timed[0].clipped_bottom), (1320, 1440, true));
-        assert_eq!((layout.timed[1].day, layout.timed[1].top, layout.timed[1].bottom, layout.timed[1].clipped_top), (4, 0, 120, true));
+        assert_eq!(
+            (layout.timed[1].day, layout.timed[1].top, layout.timed[1].bottom, layout.timed[1].clipped_top),
+            (4, 0, 120, true)
+        );
     }
 
     #[test]

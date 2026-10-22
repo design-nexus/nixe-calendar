@@ -1,8 +1,8 @@
 //! Calendar — your online and local calendars, for Omarchy.
 
 mod actions;
-mod control;
 mod agenda;
+mod control;
 mod days;
 mod details;
 mod draw;
@@ -27,6 +27,7 @@ const USAGE: &str = "Usage: nixe-calendar [OPTIONS] [FILE.ics...]\n\
 \n\
   FILE.ics        import the events in an iCalendar file\n\
   --section ID    open day, week, month, agenda or settings\n\
+  --date DAY      show that day (YYYY-MM-DD)\n\
   --toggle        close the window if it's open, otherwise open it\n";
 
 /// Starts the reminders service if it's installed and not running (it's enabled
@@ -75,13 +76,20 @@ fn main() -> glib::ExitCode {
             return glib::ExitCode::SUCCESS;
         }
         window::present(app, value("--section").as_deref());
+        if let Some(day) = value("--date").and_then(|d| chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok()) {
+            window::go_to(day);
+        }
         // Files to import, from the command line or "Open with Calendar". Wait a
         // moment for the calendars to load so the import dialog can list them.
         let cwd = cl.cwd();
         let files: Vec<std::path::PathBuf> = argv
             .iter()
             .skip(1)
-            .filter(|a| !a.starts_with("--") && Some(a.as_str()) != value("--section").as_deref())
+            .filter(|a| {
+                !a.starts_with("--")
+                    && Some(a.as_str()) != value("--section").as_deref()
+                    && Some(a.as_str()) != value("--date").as_deref()
+            })
             .map(|a| {
                 let path = std::path::PathBuf::from(a.strip_prefix("file://").unwrap_or(a));
                 match &cwd {

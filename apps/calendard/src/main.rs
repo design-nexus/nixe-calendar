@@ -96,7 +96,9 @@ fn start() {
                     return;
                 }
                 // Task lists' alerts are Nixe Reminders' to show.
-                let events_only = |source: &str| STATE.with(|s| s.borrow().registry.as_ref().is_some_and(|r| r.source(source, Kind::Calendar).is_some()));
+                let events_only = |source: &str| {
+                    STATE.with(|s| s.borrow().registry.as_ref().is_some_and(|r| r.source(source, Kind::Calendar).is_some()))
+                };
                 for reminder in due.into_iter().filter(|r| events_only(&r.source)) {
                     notifier.show(reminder);
                 }
