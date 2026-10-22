@@ -39,8 +39,23 @@ impl Notifier {
                     let Some(reminder) = s.borrow_mut().remove(&id) else { return };
                     match action.as_str() {
                         "snooze" => crate::with_reminders(|r| r.snooze(&reminder, crate::snooze_until())),
+                        "join" => {
+                            let item = &reminder.item;
+                            if let Some(link) =
+                                nixe_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description)
+                            {
+                                let _ = gio::AppInfo::launch_default_for_uri(&link, None::<&gio::AppLaunchContext>);
+                            }
+                            crate::with_reminders(|r| {
+                                let _ = r.dismiss(&reminder);
+                            });
+                        }
                         "default" | "open" => {
-                            let _ = std::process::Command::new("nixe-calendar").args(["--section", "day"]).spawn();
+                            let day = DateTime::from_timestamp(reminder.starts, 0)
+                                .map(|t| t.with_timezone(&Local).format("%Y-%m-%d").to_string())
+                                .unwrap_or_default();
+                            let _ =
+                                std::process::Command::new("nixe-calendar").args(["--section", "day", "--date", &day]).spawn();
                             crate::with_reminders(|r| {
                                 let _ = r.dismiss(&reminder);
                             });
@@ -80,10 +95,16 @@ impl Notifier {
         let summary =
             if reminder.item.summary.trim().is_empty() { "Untitled".to_string() } else { reminder.item.summary.clone() };
         let body = body(&reminder, Local::now().timestamp());
-        let actions: Vec<String> = ["default", "Open", "open", "Open", "snooze", "Snooze 10 min", "dismiss", "Dismiss"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        // A video call gets Join first.
+        let item = &reminder.item;
+        let call = nixe_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description).is_some();
+        let mut actions: Vec<String> = ["default", "Open"].iter().map(|s| s.to_string()).collect();
+        if call {
+            actions.extend(["join".to_string(), "Join".to_string()]);
+        } else {
+            actions.extend(["open".to_string(), "Open".to_string()]);
+        }
+        actions.extend(["snooze", "Snooze 10 min", "dismiss", "Dismiss"].iter().map(|s| s.to_string()));
         let mut hints: HashMap<String, glib::Variant> = HashMap::new();
         hints.insert("desktop-entry".into(), ICON.to_variant());
         hints.insert("urgency".into(), 1u8.to_variant());

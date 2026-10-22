@@ -148,3 +148,22 @@ entry.error {
 button.destructive {
   color: @theme_danger;
 }
+
+.editor-clash {
+  color: @theme_danger;
+  font-size: 0.9em;
+}
+
+.menu-list {
+  padding: 4px;
+  min-width: 240px;
+}
+
+.year-page {
+  padding: 16px 24px 36px 24px;
+}
+
+.year-month-title {
+  font-weight: 600;
+  margin-left: 4px;
+}

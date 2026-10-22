@@ -17,6 +17,7 @@ mod theme;
 mod widgets;
 mod window;
 mod worker;
+mod year;
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
@@ -26,7 +27,7 @@ pub const APP_ID: &str = "io.github.design_nexus.nixe.Calendar";
 const USAGE: &str = "Usage: nixe-calendar [OPTIONS] [FILE.ics...]\n\
 \n\
   FILE.ics        import the events in an iCalendar file\n\
-  --section ID    open day, week, month, agenda or settings\n\
+  --section ID    open day, week, month, year, agenda or settings\n\
   --date DAY      show that day (YYYY-MM-DD)\n\
   --toggle        close the window if it's open, otherwise open it\n\
   --describe      print the control tools (JSON) and exit\n";

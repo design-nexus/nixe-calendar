@@ -35,14 +35,14 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 - [ ] Moving an event to another calendar
 
 ### 3. Advanced
-- [ ] Year view
+- [x] Year view (twelve months, days with events marked; Y)
 - [x] Natural-language quick create (`nixe-when`), other readings offered before saving (done with the MVP)
-- [ ] Calendar Sets (Work, Personal, Combined, custom)
-- [ ] Scheduling assistant: free/busy, working hours, suggested times
-- [ ] Smart scheduling: propose moves; never change an existing event without approval
-- [ ] Meeting links (Google Meet, Zoom, Teams): detect, join with one click
-- [ ] Locations: open in Maps (OSM link until Nixe Maps exists)
-- [ ] Optional reminders overlay from EDS task lists
+- [x] Calendar Sets: named groups of calendars in the sidebar (shown through EDS visibility)
+- [x] Scheduling assistant: working hours, Find a time in the editor, `calendar.suggest_times` (own calendars; others' free/busy later)
+- [x] Smart scheduling: the editor names clashes and suggests free times; nothing moves without the user
+- [x] Meeting links (Meet, Zoom, Teams, Jitsi, Whereby, Webex): Join in the popover (J) and on alerts
+- [x] Locations: open on OpenStreetMap (until Nixe Maps exists)
+- [x] Optional reminders overlay from EDS task lists (Settings → Working hours)
 - [ ] Microsoft 365 through `evolution-ews`
 
 ## Out of scope

@@ -4,6 +4,7 @@
 //! them into local wall-clock spans and lays a week out for drawing.
 
 mod month;
+pub mod plan;
 mod repeat;
 mod week;
 

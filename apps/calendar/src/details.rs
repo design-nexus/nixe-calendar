@@ -11,6 +11,15 @@ use nixe_calendar_core::{Event, Repeat, Response};
 const GUESTS_SHOWN: usize = 6;
 
 pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, event: Event) {
+    // A reminder in the overlay belongs to Reminders.
+    if let Some(list) = event.calendar.strip_prefix("task:") {
+        let program = nixe_accounts::find_bin("nixe-reminders").unwrap_or_else(|| "nixe-reminders".into());
+        if std::process::Command::new(program).args(["--section", &format!("list:{list}")]).spawn().is_err() {
+            window::toast("Install Nixe Reminders to open reminders.");
+        }
+        let _ = (parent, rect);
+        return;
+    }
     let calendars = window::calendars();
     let calendar = calendars.iter().find(|c| c.uid == event.calendar);
     let read_only = calendar.is_none_or(|c| c.read_only);
@@ -52,7 +61,29 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, event: Event) {
         card.append(&line("Cancelled", "dialog-warning-symbolic"));
     }
     if !event.location.is_empty() {
-        card.append(&line(&event.location, "mark-location-symbolic"));
+        let row = line(&event.location, "mark-location-symbolic");
+        if let Some(link) = nixe_calendar_core::plan::map_link(&event.location) {
+            let map = widgets::icon_button("find-location-symbolic", "Show on a map");
+            map.set_valign(gtk::Align::Start);
+            map.connect_clicked(move |_| window::open_link(&link));
+            if let Some(label) = row.last_child() {
+                label.set_hexpand(true);
+            }
+            row.append(&map);
+        }
+        card.append(&row);
+    }
+    if let Some(link) = nixe_calendar_core::plan::meeting_link(&event) {
+        let join = gtk::Button::from_icon_name("camera-web-symbolic");
+        join.add_css_class("suggested-action");
+        join.set_tooltip_text(Some("Join the video call (J)"));
+        join.set_halign(gtk::Align::Start);
+        let (l, p) = (link.clone(), popover.clone());
+        join.connect_clicked(move |_| {
+            p.popdown();
+            window::open_link(&l);
+        });
+        card.append(&join);
     }
     if !event.alarms.is_empty() {
         let text = event.alarms.iter().map(|m| editor::alert_label(*m)).collect::<Vec<_>>().join(", ");
@@ -177,6 +208,12 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, event: Event) {
     let (e, p) = (event.clone(), popover.clone());
     keys.connect_key_pressed(move |_, key, _, _| {
         match key {
+            gtk::gdk::Key::j => {
+                if let Some(link) = nixe_calendar_core::plan::meeting_link(&e) {
+                    p.popdown();
+                    window::open_link(&link);
+                }
+            }
             gtk::gdk::Key::e if !read_only => {
                 p.popdown();
                 editor::open(Some(&e), None);

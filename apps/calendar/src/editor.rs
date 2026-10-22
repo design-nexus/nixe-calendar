@@ -4,6 +4,7 @@ use crate::actions;
 use crate::draw;
 use crate::widgets;
 use crate::window;
+use crate::worker;
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use gtk::prelude::*;
 use nixe_calendar_core::{Ends, Event, Repeat, Span, whens};
@@ -103,6 +104,16 @@ fn time_entry(time: NaiveTime) -> gtk::Entry {
         }
     });
     entry
+}
+
+/// "30 minutes", "1 hour", "1 h 30 min".
+fn duration_text(minutes: i64) -> String {
+    match (minutes / 60, minutes % 60) {
+        (0, m) => format!("{m} minutes"),
+        (1, 0) => "1 hour".into(),
+        (h, 0) => format!("{h} hours"),
+        (h, m) => format!("{h} h {m} min"),
+    }
 }
 
 fn labeled(text: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
@@ -205,6 +216,126 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         };
         show(all_day);
         all_day_switch.connect_active_notify(move |s| show(s.is_active()));
+    }
+
+    // The scheduling assistant: what this time clashes with, and free times.
+    let clash = widgets::label("", "editor-clash");
+    clash.set_xalign(0.0);
+    clash.set_wrap(true);
+    clash.set_visible(false);
+    card.append(&clash);
+    let find = gtk::MenuButton::new();
+    find.set_icon_name("appointment-soon-symbolic");
+    find.set_tooltip_text(Some("Find a time: free times this long, within working hours"));
+    find.set_has_frame(false);
+    starts.append(&find);
+    let ignore = event.as_ref().map(|e| (e.uid.clone(), e.rid.clone()));
+    let timed = {
+        let (sd, ed, st, et, sw) =
+            (start_date.date.clone(), end_date.date.clone(), start_time.clone(), end_time.clone(), all_day_switch.clone());
+        Rc::new(move || -> Option<(NaiveDateTime, NaiveDateTime)> {
+            if sw.is_active() {
+                return None;
+            }
+            let (a, b) = (parse_time(&st.text())?, parse_time(&et.text())?);
+            let (s, e) = (sd.get().and_time(a), ed.get().max(sd.get()).and_time(b));
+            (e > s).then_some((s, e))
+        })
+    };
+    let check = {
+        let (timed, clash, ignore) = (timed.clone(), clash.clone(), ignore.clone());
+        let asked = Rc::new(Cell::new(0u64));
+        Rc::new(move || {
+            let n = asked.get() + 1;
+            asked.set(n);
+            let Some((s, e)) = timed() else {
+                clash.set_visible(false);
+                return;
+            };
+            let (clash, ignore, asked) = (clash.clone(), ignore.clone(), asked.clone());
+            worker::ask(
+                move || worker::events_between(s.date(), e.date() + Duration::days(1)),
+                move |events| {
+                    if asked.get() != n {
+                        return;
+                    }
+                    let skip = ignore.as_ref().map(|(u, r)| (u.as_str(), r.as_deref()));
+                    let hits = nixe_calendar_core::plan::clashes(&events, s, e, skip);
+                    let names: Vec<String> = hits.iter().take(3).map(|e| format!("“{}”", e.title)).collect();
+                    clash.set_visible(!hits.is_empty());
+                    clash.set_text(&match hits.len() {
+                        0 => String::new(),
+                        n if n > 3 => {
+                            format!("Overlaps {} and {} more. Find a time suggests free ones.", names.join(", "), n - 3)
+                        }
+                        _ => format!("Overlaps {}. Find a time suggests free ones.", names.join(" and ")),
+                    });
+                },
+            );
+        })
+    };
+    for entry in [&start_time, &end_time] {
+        let c = check.clone();
+        entry.connect_changed(move |_| c());
+    }
+    {
+        let c = check.clone();
+        all_day_switch.connect_active_notify(move |_| c());
+        for button in [&start_date.button, &end_date.button] {
+            let c = check.clone();
+            button.connect_label_notify(move |_| c());
+        }
+    }
+    check();
+    {
+        let (timed, ignore) = (timed.clone(), ignore.clone());
+        let (sd, ed, st, et) = (start_date.date.clone(), end_date.clone(), start_time.clone(), end_time.clone());
+        let start_button = start_date.button.clone();
+        find.set_create_popup_func(move |button| {
+            let list = gtk::Box::new(gtk::Orientation::Vertical, 2);
+            list.add_css_class("menu-list");
+            let popover = gtk::Popover::new();
+            popover.set_child(Some(&list));
+            button.set_popover(Some(&popover));
+            let minutes = timed().map(|(s, e)| (e - s).num_minutes()).unwrap_or(60).clamp(5, 12 * 60);
+            list.append(&widgets::label(&format!("Free for {}", duration_text(minutes)), "dim"));
+            let now = Local::now().naive_local();
+            let after = sd.get().and_time(NaiveTime::MIN).max(now);
+            let hours = crate::prefs::get().working_hours;
+            let ignore = ignore.clone();
+            let (sd, ed, st, et, start_button, popover) =
+                (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone());
+            worker::ask(
+                move || worker::events_between(after.date(), after.date() + Duration::days(14)),
+                move |events| {
+                    let skip = ignore.as_ref().map(|(u, r)| (u.as_str(), r.as_deref()));
+                    let busy = nixe_calendar_core::plan::busy(&events, skip);
+                    let times = nixe_calendar_core::plan::suggest(&busy, after, minutes, &hours, 8, 14);
+                    if times.is_empty() {
+                        list.append(&widgets::label("Nothing free in working hours in the next two weeks.", "dim"));
+                    }
+                    for t in times {
+                        let end = t + Duration::minutes(minutes);
+                        let label =
+                            format!("{} · {}–{}", t.format("%a %b %-d"), draw::time_text(t.time()), draw::time_text(end.time()));
+                        let item = gtk::Button::with_label(&label);
+                        item.add_css_class("flat");
+                        item.add_css_class("menu-item");
+                        let (sd, ed, st, et, sb, p) =
+                            (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone());
+                        item.connect_clicked(move |_| {
+                            sd.set(t.date());
+                            sb.set_label(&t.date().format("%a, %b %-d, %Y").to_string());
+                            ed.set(end.date());
+                            st.set_text(&draw::time_text(t.time()));
+                            et.set_text(&draw::time_text(end.time()));
+                            p.popdown();
+                        });
+                        list.append(&item);
+                    }
+                },
+            );
+        });
     }
 
     // Repeat: Never, the presets for the start date, and the rule as it is when

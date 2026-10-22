@@ -33,6 +33,11 @@
   to `details.rs` (popover), `quick.rs` (natural-language create) and `editor.rs`.
   Changes run through `actions.rs` on the worker (`worker::ask`). Delete keeps an export
   of the series for Undo.
-- Control tools (`control.rs`): `calendar.list/read/next/search/free_slots` read;
+- Planning (`nixe_calendar_core::plan`): working hours (prefs), free time, `suggest`,
+  `clashes`, meeting and map links. The editor's Find a time and clash line use it,
+  through the worker. Sets live in prefs and apply by EDS visibility. The reminders
+  overlay (`worker::reminders_between`) adds `task:<list>` pseudo-events to the views
+  only; clicking one opens Reminders. `year.rs` is the year view.
+- Control tools (`control.rs`): `calendar.list/read/next/search/free_slots/suggest_times` read;
   `calendar.create/edit/delete` change. Before Assistant uses them, its `nixe-apps`
   ability needs them and its policy must treat the changing ones as edits.

@@ -8,5 +8,6 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "60bb4f0183a6b85c47dc09c7501c2c53cec65eb9" }

@@ -9,6 +9,8 @@ use gtk::prelude::*;
 pub fn build(page: &Page) {
     window_group(page);
     week(page);
+    working(page);
+    sets(page);
     accounts(page);
     keyboard(page);
 }
@@ -73,6 +75,65 @@ fn week(page: &Page) {
             prefs::update(|p| p.day_starts = hour.parse().unwrap_or(8))
         });
     group.add(&row);
+}
+
+fn working(page: &Page) {
+    let group = page.group("Working hours");
+    group.note("Find a time and Assistant's suggested times stay within these.");
+    let hours = prefs::get().working_hours;
+    let days = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    for (i, name) in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].iter().enumerate() {
+        let toggle = gtk::ToggleButton::with_label(name);
+        toggle.add_css_class("segment");
+        toggle.set_active(hours.days[i]);
+        toggle.connect_toggled(move |t| prefs::update(|p| p.working_hours.days[i] = t.is_active()));
+        days.append(&toggle);
+    }
+    group.add(&widgets::row("Days", "", Some(days.upcast_ref())));
+    let times: Vec<(String, String)> =
+        (0..=48).map(|h| ((h * 30).to_string(), format!("{:02}:{:02}", h / 2, h % 2 * 30))).collect();
+    let (row, _) = widgets::choice_row("Start", "", times.clone(), &hours.start.to_string(), |v| {
+        prefs::update(|p| p.working_hours.start = v.parse().unwrap_or(9 * 60))
+    });
+    group.add(&row);
+    let (row, _) = widgets::choice_row("End", "", times, &hours.end.to_string(), |v| {
+        prefs::update(|p| p.working_hours.end = v.parse().unwrap_or(17 * 60))
+    });
+    group.add(&row);
+    let (row, _) = widgets::switch_row(
+        "Show reminders",
+        "Reminders with a due date, from your task lists, in the day and week views.",
+        prefs::get().show_reminders,
+        |on| {
+            prefs::update(|p| p.show_reminders = on);
+            window::refresh_reminders();
+        },
+    );
+    group.add(&row);
+}
+
+fn sets(page: &Page) {
+    let group = page.group("Calendar sets");
+    group.note("Show a group of calendars together from the sidebar. Save the calendars shown now with + beside SETS.");
+    let sets = prefs::get().sets;
+    if sets.is_empty() {
+        group.add(&widgets::row("No sets yet", "", None));
+    }
+    let calendars = window::calendars();
+    for set in sets {
+        let names: Vec<String> =
+            set.calendars.iter().filter_map(|u| calendars.iter().find(|c| c.uid == *u).map(|c| c.name.clone())).collect();
+        let remove = widgets::icon_button("user-trash-symbolic", &format!("Remove the set “{}” (the calendars stay)", set.name));
+        let name = set.name.clone();
+        let line = widgets::row(&set.name, &names.join(", "), Some(remove.upcast_ref()));
+        let l = line.clone();
+        remove.connect_clicked(move |_| {
+            prefs::update(|p| p.sets.retain(|s| s.name != name));
+            l.set_visible(false);
+            window::refresh_nav();
+        });
+        group.add(&line);
+    }
 }
 
 fn accounts(page: &Page) {

@@ -22,6 +22,20 @@ pub struct Prefs {
     pub view: String,
     /// The calendar new events go to.
     pub last_calendar: String,
+    /// When the user works (suggested times, free time).
+    pub working_hours: nixe_calendar_core::plan::WorkingHours,
+    /// Named groups of calendars to show together.
+    pub sets: Vec<CalendarSet>,
+    /// Show reminders with a due date (from the task lists) in the views.
+    pub show_reminders: bool,
+}
+
+/// Calendars shown together ("Work", "Family").
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalendarSet {
+    pub name: String,
+    /// Calendar (EDS source) uids.
+    pub calendars: Vec<String>,
 }
 
 impl Default for Prefs {
@@ -37,6 +51,9 @@ impl Default for Prefs {
             day_starts: 8,
             view: "week".into(),
             last_calendar: String::new(),
+            working_hours: Default::default(),
+            sets: Vec::new(),
+            show_reminders: false,
         }
     }
 }

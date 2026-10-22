@@ -31,6 +31,7 @@ pub const SHORTCUTS: &[(&[&str], &str)] = &[
     (&["D"], "Day view"),
     (&["W"], "Week view"),
     (&["M"], "Month view"),
+    (&["Y"], "Year view"),
     (&["A"], "Agenda"),
     (&["E"], "Edit the open event"),
     (&["Delete"], "Delete the open event"),
@@ -49,6 +50,7 @@ pub enum ViewKind {
     Day,
     Week,
     Month,
+    Year,
     Agenda,
 }
 
@@ -58,6 +60,7 @@ impl ViewKind {
             Self::Day => "day",
             Self::Week => "week",
             Self::Month => "month",
+            Self::Year => "year",
             Self::Agenda => "agenda",
         }
     }
@@ -66,6 +69,7 @@ impl ViewKind {
         match id {
             "day" => Self::Day,
             "month" => Self::Month,
+            "year" => Self::Year,
             "agenda" => Self::Agenda,
             _ => Self::Week,
         }
@@ -76,6 +80,7 @@ impl ViewKind {
             Self::Day => "Day",
             Self::Week => "Week",
             Self::Month => "Month",
+            Self::Year => "Year",
             Self::Agenda => "Agenda",
         }
     }
@@ -85,6 +90,9 @@ const AGENDA_DAYS: i64 = 30;
 const SEARCH_DAYS: i64 = 365;
 
 struct Ui {
+    /// Reminders due in the range (the overlay), and their lists.
+    reminders: Vec<Event>,
+    task_lists: Vec<worker::TaskList>,
     window: gtk::ApplicationWindow,
     overlay: gtk::Overlay,
     nav: gtk::Box,
@@ -97,6 +105,7 @@ struct Ui {
     pages: gtk::Stack,
     days: DaysView,
     month: MonthView,
+    year: crate::year::YearView,
     agenda: AgendaView,
     mini: MiniCalendar,
     view: ViewKind,
@@ -179,7 +188,7 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
     }
     match section {
         Some("settings") => settings_dialog::open(),
-        Some(id @ ("day" | "week" | "month" | "agenda")) => set_view(ViewKind::from_id(id)),
+        Some(id @ ("day" | "week" | "month" | "year" | "agenda")) => set_view(ViewKind::from_id(id)),
         _ => {}
     }
     if let Some(out) = snapshot {
@@ -289,7 +298,10 @@ fn filtered(events: &[Event], query: &str) -> Vec<Event> {
 fn show_view() {
     let Some(ui) = ui() else { return };
     let u = ui.borrow();
-    let calendars = calendar_map(&u.calendars);
+    let mut calendars = calendar_map(&u.calendars);
+    for (uid, name, color) in &u.task_lists {
+        calendars.insert(uid.clone(), (name.clone(), color.clone()));
+    }
     let query = u.search.text().to_string();
     let empty = u.loaded && u.unavailable.is_none() && u.calendars.is_empty();
     if empty {
@@ -303,7 +315,12 @@ fn show_view() {
         u.title.set_text(&format!("Results for “{q}”"));
         return;
     }
-    let events = filtered(&u.events, &query);
+    let mut all = u.events.clone();
+    if prefs::get().show_reminders {
+        all.extend(u.reminders.iter().cloned());
+        all.sort_by_key(|e| e.sort_key());
+    }
+    let events = filtered(&all, &query);
     match u.view {
         ViewKind::Day | ViewKind::Week => {
             let days: Vec<NaiveDate> = (0..(u.range.1 - u.range.0).num_days()).map(|i| u.range.0 + Duration::days(i)).collect();
@@ -313,6 +330,10 @@ fn show_view() {
         ViewKind::Month => {
             u.month.set(u.anchor.month(), month_weeks(u.anchor, prefs::first_weekday()), &events, calendars);
             u.pages.set_visible_child_name("month");
+        }
+        ViewKind::Year => {
+            u.year.set(u.anchor.year(), &events);
+            u.pages.set_visible_child_name("year");
         }
         ViewKind::Agenda => {
             u.agenda.set(u.range.0, (u.range.1 - u.range.0).num_days(), &events, &calendars, "Nothing in the next 30 days");
@@ -327,6 +348,7 @@ fn view_title(view: ViewKind, anchor: NaiveDate, (from, to): (NaiveDate, NaiveDa
     match view {
         ViewKind::Day => anchor.format("%A, %B %-d, %Y").to_string(),
         ViewKind::Month => anchor.format("%B %Y").to_string(),
+        ViewKind::Year => anchor.format("%Y").to_string(),
         ViewKind::Week | ViewKind::Agenda => {
             if from.month() == last.month() && view == ViewKind::Week {
                 from.format("%B %Y").to_string()
@@ -353,6 +375,10 @@ fn range_for(view: ViewKind, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
             (first, last + Duration::days(1))
         }
         ViewKind::Agenda => (anchor, anchor + Duration::days(AGENDA_DAYS)),
+        ViewKind::Year => {
+            let first = NaiveDate::from_ymd_opt(anchor.year(), 1, 1).unwrap_or(anchor);
+            (first, NaiveDate::from_ymd_opt(anchor.year() + 1, 1, 1).unwrap_or(anchor))
+        }
     }
 }
 
@@ -371,6 +397,7 @@ pub fn go_to(date: NaiveDate) {
         u.results = None;
     }
     worker::show_range(range.0, range.1);
+    refresh_reminders();
     let mini = ui.borrow().mini.clone();
     mini.show(range.0, range.1, date);
     show_view();
@@ -393,7 +420,7 @@ fn set_view(view: ViewKind) {
 }
 
 fn select_segment(switcher: &gtk::Box, id: &str) {
-    let ids = ["day", "week", "month", "agenda"];
+    let ids = ["day", "week", "month", "year", "agenda"];
     let mut child = switcher.first_child();
     let mut i = 0;
     while let Some(widget) = child {
@@ -415,6 +442,7 @@ fn shift(step: i64) {
         ViewKind::Day => anchor + Duration::days(step),
         ViewKind::Week => anchor + Duration::weeks(step),
         ViewKind::Agenda => anchor + Duration::days(step * 7),
+        ViewKind::Year => anchor.with_year(anchor.year() + step as i32).unwrap_or(anchor),
         ViewKind::Month => {
             let first = anchor.with_day(1).unwrap_or(anchor);
             if step < 0 {
@@ -652,6 +680,45 @@ fn rebuild_nav() {
     list.append(&mini);
 
     let calendars = ui.borrow().calendars.clone();
+    // Calendar Sets: show a group of calendars together.
+    if !calendars.is_empty() {
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        row.add_css_class("compact-hide");
+        let label = widgets::label("SETS", "nav-group");
+        label.add_css_class("first");
+        label.set_hexpand(true);
+        label.set_xalign(0.0);
+        row.append(&label);
+        let plus = widgets::icon_button("list-add-symbolic", "Save the shown calendars as a set");
+        plus.add_css_class("flat");
+        plus.add_css_class("nav-group-add");
+        plus.set_valign(gtk::Align::End);
+        plus.connect_clicked(|_| save_set());
+        row.append(&plus);
+        list.append(&row);
+        let shown: Vec<String> = calendars.iter().filter(|c| c.selected).map(|c| c.uid.clone()).collect();
+        let all = calendars.iter().all(|c| c.selected);
+        let everything = nav_button("view-app-grid-symbolic", "All calendars", "Show every calendar");
+        if all {
+            everything.add_css_class("active");
+        }
+        everything.connect_clicked(|_| show_set(None));
+        list.append(&everything);
+        for set in prefs::get().sets {
+            let mut want = set.calendars.clone();
+            want.retain(|u| calendars.iter().any(|c| c.uid == *u));
+            want.sort();
+            let mut now = shown.clone();
+            now.sort();
+            let button = nav_button("view-list-symbolic", &set.name, &format!("Show {}", set.name));
+            if !all && want == now {
+                button.add_css_class("active");
+            }
+            let set = set.clone();
+            button.connect_clicked(move |_| show_set(Some(&set)));
+            list.append(&button);
+        }
+    }
     let mut groups: Vec<(String, Vec<CalendarInfo>)> = Vec::new();
     for cal in calendars {
         let label = cal.group_label().to_string();
@@ -710,7 +777,7 @@ fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
     title.set_hexpand(true);
     title.set_xalign(0.0);
     let switcher = widgets::segmented(
-        &widgets::opts(&[("day", "Day"), ("week", "Week"), ("month", "Month"), ("agenda", "Agenda")]),
+        &widgets::opts(&[("day", "Day"), ("week", "Week"), ("month", "Month"), ("year", "Year"), ("agenda", "Agenda")]),
         &prefs::get().view,
         |id| {
             if ui().is_some_and(|u| u.borrow().view.id() != id) {
@@ -718,7 +785,7 @@ fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
             }
         },
     );
-    switcher.set_tooltip_text(Some("Day (D), Week (W), Month (M), Agenda (A)"));
+    switcher.set_tooltip_text(Some("Day (D), Week (W), Month (M), Year (Y), Agenda (A)"));
     let add = widgets::icon_button("list-add-symbolic", "New event (N)");
     add.add_css_class("suggested-action");
     add.connect_clicked(|_| new_event());
@@ -812,6 +879,11 @@ fn build(app: &gtk::Application) {
     pages.set_transition_type(gtk::StackTransitionType::Crossfade);
     pages.add_named(&days.root, Some("days"));
     pages.add_named(&month.root, Some("month"));
+    let year = crate::year::YearView::new(|day| {
+        set_view(ViewKind::Day);
+        go_to(day);
+    });
+    pages.add_named(&year.root, Some("year"));
     pages.add_named(&agenda.root, Some("agenda"));
     let empty = widgets::empty_state(
         "x-office-calendar-symbolic",
@@ -846,6 +918,8 @@ fn build(app: &gtk::Application) {
 
     let today = Local::now().date_naive();
     let ui = Ui {
+        reminders: Vec::new(),
+        task_lists: Vec::new(),
         window: window.clone(),
         overlay: overlay.clone(),
         nav: nav.clone(),
@@ -858,6 +932,7 @@ fn build(app: &gtk::Application) {
         pages,
         days,
         month,
+        year,
         agenda,
         mini,
         view: ViewKind::from_id(&prefs::get().view),
@@ -989,6 +1064,7 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
             gdk::Key::w => set_view(ViewKind::Week),
             gdk::Key::m => set_view(ViewKind::Month),
             gdk::Key::a => set_view(ViewKind::Agenda),
+            gdk::Key::y => set_view(ViewKind::Year),
             gdk::Key::n => new_event(),
             gdk::Key::r => refresh(),
             gdk::Key::slash => {
@@ -1028,6 +1104,18 @@ pub fn show_shortcuts() {
     close.connect_clicked(move |_| dialog2.close());
     card.append(&close);
     dialog.present();
+}
+
+/// Opens a web link (a video call, a map) in the default app.
+pub fn open_link(uri: &str) {
+    if !uri.starts_with("https://") {
+        return;
+    }
+    gtk::UriLauncher::new(uri).launch(window().as_ref(), gtk::gio::Cancellable::NONE, |r| {
+        if let Err(e) = r {
+            toast(&format!("Couldn't open the link: {}", e.message()));
+        }
+    });
 }
 
 pub fn toast(message: &str) {
@@ -1078,4 +1166,96 @@ fn show_toast(message: &str, undo: Option<Box<dyn Fn()>>) {
             overlay.remove_overlay(&bx);
         }
     });
+}
+
+/// Shows a set's calendars and hides the rest (every calendar for `None`).
+/// Which calendars show is EDS's, so other calendar apps follow.
+fn show_set(set: Option<&prefs::CalendarSet>) {
+    for cal in calendars() {
+        let want = set.is_none_or(|s| s.calendars.contains(&cal.uid));
+        if want != cal.selected {
+            worker::set_selected(cal.uid.clone(), want);
+        }
+    }
+}
+
+/// Names the calendars shown now as a set.
+fn save_set() {
+    let shown: Vec<String> = calendars().into_iter().filter(|c| c.selected).map(|c| c.uid).collect();
+    if shown.is_empty() {
+        toast("Show the calendars for the set first.");
+        return;
+    }
+    let (dialog, card) = widgets::dialog("New set", 420);
+    let note = widgets::label(
+        &format!(
+            "The {} shown now, together.",
+            if shown.len() == 1 { "calendar".to_string() } else { format!("{} calendars", shown.len()) }
+        ),
+        "dim",
+    );
+    note.set_xalign(0.0);
+    card.append(&note);
+    let name = gtk::Entry::new();
+    name.set_placeholder_text(Some("Work, Family…"));
+    card.append(&name);
+    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    buttons.set_halign(gtk::Align::End);
+    let cancel = gtk::Button::with_label("Not now");
+    let save = gtk::Button::with_label("Save");
+    save.add_css_class("suggested-action");
+    buttons.append(&cancel);
+    buttons.append(&save);
+    card.append(&buttons);
+    let d = dialog.clone();
+    cancel.connect_clicked(move |_| d.close());
+    let (d, n) = (dialog.clone(), name.clone());
+    let done = move || {
+        let text = n.text().trim().to_string();
+        if text.is_empty() {
+            return;
+        }
+        let calendars = shown.clone();
+        prefs::update(|p| {
+            p.sets.retain(|s| s.name != text);
+            p.sets.push(prefs::CalendarSet { name: text.clone(), calendars });
+        });
+        rebuild_nav();
+        d.close();
+    };
+    let again = done.clone();
+    save.connect_clicked(move |_| done());
+    name.connect_activate(move |_| again());
+    dialog.present();
+    name.grab_focus();
+}
+
+pub fn refresh_nav() {
+    rebuild_nav();
+}
+
+/// Reloads the reminders overlay for the range shown (or clears it).
+pub fn refresh_reminders() {
+    let Some(ui) = ui() else { return };
+    if !prefs::get().show_reminders {
+        ui.borrow_mut().reminders.clear();
+        show_view();
+        return;
+    }
+    let range = ui.borrow().range;
+    worker::ask(
+        move || worker::reminders_between(range.0, range.1),
+        move |(events, lists)| {
+            let Some(ui) = self::ui() else { return };
+            if ui.borrow().range != range {
+                return;
+            }
+            {
+                let mut u = ui.borrow_mut();
+                u.reminders = events;
+                u.task_lists = lists;
+            }
+            show_view();
+        },
+    );
 }

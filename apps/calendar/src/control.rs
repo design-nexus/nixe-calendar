@@ -21,6 +21,7 @@ pub fn tools() -> Value {
         {"name": "calendar.next", "description": "The next events from now (5 unless given), within 30 days.", "inputSchema": {"type": "object", "properties": {"count": {"type": "integer"}}}},
         {"name": "calendar.search", "description": "Events whose title, place or notes contain the words, a year either side of today.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
         {"name": "calendar.free_slots", "description": "Free time on a day between working hours (9 to 17 unless given) at least this long (30 minutes unless given).", "inputSchema": {"type": "object", "properties": {"date": {"type": "string", "description": "YYYY-MM-DD"}, "minutes": {"type": "integer"}, "from_hour": {"type": "integer"}, "to_hour": {"type": "integer"}}, "required": ["date"]}},
+        {"name": "calendar.suggest_times", "description": "Times an event this long (minutes) fits in the shown calendars, within the user's working hours, from a date or now. Suggestions only; nothing is booked.", "inputSchema": {"type": "object", "properties": {"minutes": {"type": "integer"}, "from": {"type": "string", "description": "YYYY-MM-DD; today unless given"}, "count": {"type": "integer"}}, "required": ["minutes"]}},
         {"name": "calendar.create", "description": "Add an event. Without an end it lasts an hour (a day for a date).", "inputSchema": {"type": "object", "properties": {"title": {"type": "string"}, "start": when, "end": when, "location": {"type": "string"}, "notes": {"type": "string"}, "calendar": {"type": "string", "description": "Calendar uid from calendar.list; the usual one if left out"}}, "required": ["title", "start"]}},
         {"name": "calendar.edit", "description": "Change an event (by calendar and uid from calendar.read; with rid, only that occurrence).", "inputSchema": {"type": "object", "properties": {"calendar": {"type": "string"}, "uid": {"type": "string"}, "rid": {"type": "string"}, "title": {"type": "string"}, "start": when, "end": when, "location": {"type": "string"}, "notes": {"type": "string"}}, "required": ["calendar", "uid"]}},
         {"name": "calendar.delete", "description": "Delete an event (with rid, only that occurrence).", "inputSchema": {"type": "object", "properties": {"calendar": {"type": "string"}, "uid": {"type": "string"}, "rid": {"type": "string"}}, "required": ["calendar", "uid"]}},
@@ -66,6 +67,23 @@ pub fn handle(name: &str, args: Value, reply: Reply) {
                     .filter(|e| [&e.title, &e.location, &e.description].iter().any(|t| t.to_lowercase().contains(&query)))
                     .collect()
             });
+        }
+        "calendar.suggest_times" => {
+            let minutes = args["minutes"].as_i64().unwrap_or(30).clamp(5, 12 * 60);
+            let count = args["count"].as_u64().unwrap_or(5).clamp(1, 20) as usize;
+            let now = Local::now().naive_local();
+            let after = date_arg(&args, "from").filter(|d| *d > now.date()).map(|d| d.and_time(NaiveTime::MIN)).unwrap_or(now);
+            let hours = crate::prefs::get().working_hours;
+            worker::ask(
+                move || worker::events_between(after.date(), after.date() + Duration::days(21)),
+                move |events| {
+                    let busy = nixe_calendar_core::plan::busy(&events, None);
+                    let times = nixe_calendar_core::plan::suggest(&busy, after, minutes, &hours, count, 21);
+                    reply(Ok(
+                        json!({ "minutes": minutes, "times": times.iter().map(|t| t.format("%Y-%m-%dT%H:%M").to_string()).collect::<Vec<_>>() }),
+                    ));
+                },
+            );
         }
         "calendar.free_slots" => {
             let Some(date) = date_arg(&args, "date") else { return reply(Err("date is required (YYYY-MM-DD)".into())) };
@@ -235,26 +253,8 @@ fn free_slots(events: &[Event], date: NaiveDate, from_hour: u32, to_hour: u32, m
     } else {
         date.and_hms_opt(to_hour, 0, 0).unwrap_or_default()
     };
-    let mut busy: Vec<(NaiveDateTime, NaiveDateTime)> = events
-        .iter()
-        .filter(|e| !e.cancelled)
-        .filter_map(|e| match e.span {
-            Span::Timed { start, end } if end > day_start && start < day_end => Some((start.max(day_start), end.min(day_end))),
-            _ => None,
-        })
-        .collect();
-    busy.sort();
-    let mut free = Vec::new();
-    let mut cursor = day_start;
-    for (start, end) in busy {
-        if start - cursor >= Duration::minutes(minutes) {
-            free.push((cursor, start));
-        }
-        cursor = cursor.max(end);
-    }
-    if day_end - cursor >= Duration::minutes(minutes) {
-        free.push((cursor, day_end));
-    }
+    let busy = nixe_calendar_core::plan::busy(events, None);
+    let free = nixe_calendar_core::plan::free_between(&busy, day_start, day_end, minutes);
     // A day that runs to midnight ends at 23:59 here, so the end is still that day.
     let last = NaiveTime::from_hms_opt(23, 59, 0).unwrap_or(NaiveTime::MIN);
     free.into_iter().map(|(a, b)| (a.time(), if b == day_end && to_hour >= 24 { last } else { b.time() })).collect()

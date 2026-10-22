@@ -4,7 +4,7 @@
 //! data back on the GTK thread.
 
 use chrono::NaiveDate;
-use nixe_calendar_core::{CalendarInfo, Event, midnight};
+use nixe_calendar_core::{CalendarInfo, Event, Span, midnight};
 use nixe_eds::{Calendar, Kind, Registry, View, Watch, range_query};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -32,6 +32,8 @@ struct State {
     _watch: Option<Watch>,
     accounts: Option<nixe_accounts::Client>,
     open: HashMap<String, Calendar>,
+    /// Task lists opened for the reminders overlay.
+    tasks: HashMap<String, Calendar>,
     views: Vec<View>,
     /// The range and calendars the views watch.
     watching: Option<(NaiveDate, NaiveDate, Vec<String>)>,
@@ -93,6 +95,78 @@ pub fn with_calendar<T>(uid: &str, f: impl FnOnce(&Calendar) -> Result<T, nixe_e
         }
         f(&state.open[uid]).map_err(|e| e.to_string())
     })
+}
+
+/// A task list for the reminders overlay: uid, name, color.
+pub type TaskList = (String, String, Option<String>);
+
+/// Open reminders due between two dates in the shown task lists, as events in
+/// a `task:<list>` calendar (a due time lasts 30 minutes; a due day is all
+/// day). For the views only. For use inside [`ask`].
+pub fn reminders_between(from: NaiveDate, to: NaiveDate) -> (Vec<Event>, Vec<TaskList>) {
+    STATE.with(|s| {
+        let mut s = s.borrow_mut();
+        let state = &mut *s;
+        let Some(registry) = &state.registry else { return (Vec::new(), Vec::new()) };
+        let lists: Vec<nixe_eds::Source> = registry.sources(Kind::TaskList).into_iter().filter(|l| l.selected).collect();
+        let query = format!(
+            r#"(and (due-in-time-range? (make-time "{}") (make-time "{}")) (not is-completed?))"#,
+            stamp(midnight(from)),
+            stamp(midnight(to))
+        );
+        let mut events = Vec::new();
+        for list in &lists {
+            if !state.tasks.contains_key(&list.uid) {
+                match Calendar::open(registry, &list.uid, Kind::TaskList, Some(10)) {
+                    Ok(cal) => {
+                        state.tasks.insert(list.uid.clone(), cal);
+                    }
+                    Err(_) => continue,
+                }
+            }
+            let Ok(items) = state.tasks[&list.uid].items(&query) else { continue };
+            for item in items {
+                let span = match item.due {
+                    Some(nixe_eds::When::Date { year, month, day }) => {
+                        let Some(d) = NaiveDate::from_ymd_opt(year, month, day) else { continue };
+                        Span::AllDay { first: d, last: d }
+                    }
+                    Some(nixe_eds::When::Time(t)) => {
+                        let Some(at) =
+                            chrono::DateTime::from_timestamp(t, 0).map(|t| t.with_timezone(&chrono::Local).naive_local())
+                        else {
+                            continue;
+                        };
+                        Span::Timed { start: at, end: at + chrono::Duration::minutes(30) }
+                    }
+                    None => continue,
+                };
+                events.push(Event {
+                    calendar: format!("task:{}", list.uid),
+                    uid: item.uid.clone(),
+                    rid: None,
+                    title: format!("☐ {}", item.summary),
+                    location: String::new(),
+                    span,
+                    repeats: item.repeats,
+                    cancelled: false,
+                    description: item.description.clone(),
+                    url: None,
+                    rule: None,
+                    alarms: Vec::new(),
+                    organizer: None,
+                    attendees: Vec::new(),
+                });
+            }
+        }
+        let infos = lists.into_iter().map(|l| (format!("task:{}", l.uid), l.name, l.color)).collect();
+        (events, infos)
+    })
+}
+
+/// EDS's UTC time stamp form.
+fn stamp(secs: i64) -> String {
+    chrono::DateTime::from_timestamp(secs, 0).map(|t| t.format("%Y%m%dT%H%M%SZ").to_string()).unwrap_or_default()
 }
 
 /// Every occurrence in every shown calendar between two dates. For use inside [`ask`].
