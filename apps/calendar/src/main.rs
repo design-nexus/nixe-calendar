@@ -28,7 +28,8 @@ const USAGE: &str = "Usage: nixe-calendar [OPTIONS] [FILE.ics...]\n\
   FILE.ics        import the events in an iCalendar file\n\
   --section ID    open day, week, month, agenda or settings\n\
   --date DAY      show that day (YYYY-MM-DD)\n\
-  --toggle        close the window if it's open, otherwise open it\n";
+  --toggle        close the window if it's open, otherwise open it\n\
+  --describe      print the control tools (JSON) and exit\n";
 
 /// Starts the reminders service if it's installed and not running (it's enabled
 /// for login by the installer, which doesn't start it).
@@ -51,6 +52,11 @@ fn main() -> glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print!("{USAGE}");
+        return glib::ExitCode::SUCCESS;
+    }
+    // The control tools as JSON, without a window (Nixe Assistant's abilities).
+    if args.iter().any(|a| a == "--describe") {
+        println!("{}", control::tools());
         return glib::ExitCode::SUCCESS;
     }
     if std::env::var_os("GSK_RENDERER").is_none() {
