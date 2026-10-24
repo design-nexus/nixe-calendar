@@ -5,6 +5,8 @@
   min-height: 46px;
   padding: 0 12px 0 14px;
   border-bottom: 1px solid @hairline;
+  /* GTK's .toolbar spacing on top of the box's own; the title needs it at 800 px. */
+  border-spacing: 0;
 }
 
 .toolbar-title {

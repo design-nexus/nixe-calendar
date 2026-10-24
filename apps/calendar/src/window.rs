@@ -312,7 +312,9 @@ fn show_view() {
         let today = Local::now().date_naive();
         u.agenda.set(today - Duration::days(SEARCH_DAYS), 2 * SEARCH_DAYS, found, &calendars, &format!("Nothing matches “{q}”"));
         u.pages.set_visible_child_name("agenda");
-        u.title.set_text(&format!("Results for “{q}”"));
+        let results = format!("Results for “{q}”");
+        u.title.set_text(&results);
+        u.title.set_tooltip_text(Some(&results));
         return;
     }
     let mut all = u.events.clone();
@@ -340,7 +342,36 @@ fn show_view() {
             u.pages.set_visible_child_name("agenda");
         }
     }
-    u.title.set_text(&view_title(u.view, u.anchor, u.range));
+    set_view_title(&u);
+}
+
+/// The toolbar title; narrow windows get the short form, with the full one as its tooltip.
+fn set_view_title(u: &Ui) {
+    let full = view_title(u.view, u.anchor, u.range);
+    if NARROW.with(|n| n.get()) {
+        u.title.set_text(&short_title(u.view, u.anchor, u.range));
+        u.title.set_tooltip_text(Some(&full));
+    } else {
+        u.title.set_text(&full);
+        u.title.set_tooltip_text(None);
+    }
+}
+
+/// Fits beside the view switcher in an 800 px window: "Oct 2026", "Oct – Nov", "Sat, Oct 24".
+fn short_title(view: ViewKind, anchor: NaiveDate, (from, to): (NaiveDate, NaiveDate)) -> String {
+    let last = to - Duration::days(1);
+    match view {
+        ViewKind::Day => anchor.format("%a, %b %-d").to_string(),
+        ViewKind::Month => anchor.format("%b %Y").to_string(),
+        ViewKind::Year => anchor.format("%Y").to_string(),
+        ViewKind::Week | ViewKind::Agenda => {
+            if from.month() == last.month() && from.year() == last.year() {
+                from.format("%b %Y").to_string()
+            } else {
+                format!("{} – {}", from.format("%b"), last.format("%b"))
+            }
+        }
+    }
 }
 
 fn view_title(view: ViewKind, anchor: NaiveDate, (from, to): (NaiveDate, NaiveDate)) -> String {
@@ -963,6 +994,12 @@ fn build(app: &gtk::Application) {
             nav.add_css_class("sized");
             NARROW.with(|n| n.set(narrow));
             apply_compact(&nav, narrow || prefs::get().sidebar_collapsed);
+            if let Some(ui) = self::ui()
+                && let Ok(u) = ui.try_borrow()
+                && u.results.is_none()
+            {
+                set_view_title(&u);
+            }
         }
     };
     let aw = apply_width.clone();
@@ -1258,4 +1295,23 @@ pub fn refresh_reminders() {
             show_view();
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    }
+
+    #[test]
+    fn short_titles() {
+        let week = |from: NaiveDate| (from, from + Duration::days(7));
+        assert_eq!(short_title(ViewKind::Week, d(2026, 10, 14), week(d(2026, 10, 11))), "Oct 2026");
+        assert_eq!(short_title(ViewKind::Week, d(2026, 10, 28), week(d(2026, 10, 26))), "Oct – Nov");
+        assert_eq!(short_title(ViewKind::Week, d(2026, 12, 30), week(d(2026, 12, 27))), "Dec – Jan");
+        assert_eq!(short_title(ViewKind::Day, d(2026, 10, 24), (d(2026, 10, 24), d(2026, 10, 25))), "Sat, Oct 24");
+        assert_eq!(short_title(ViewKind::Month, d(2026, 9, 1), (d(2026, 8, 30), d(2026, 10, 11))), "Sep 2026");
+    }
 }
