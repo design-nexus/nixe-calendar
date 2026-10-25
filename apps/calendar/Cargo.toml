@@ -21,8 +21,8 @@ nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
 nixe-core = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
 nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
 nixe-when = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
-nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "b8204de80644e263e32783602f2e0ae393578c9e" }
 pangocairo = "0.22"
-nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "609c1d2a5af41a8ee3b76ba23611eb30d95a4743" }
+nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "b8204de80644e263e32783602f2e0ae393578c9e" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
