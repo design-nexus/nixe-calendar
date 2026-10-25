@@ -24,8 +24,9 @@
   `CALENDAR_SNAPSHOT=/tmp/cal.png CALENDAR_SNAPSHOT_W=800 nixe-calendar` under scratch
   `XDG_CONFIG_HOME`/`XDG_STATE_HOME` (copy Omarchy's colors.toml in for the real theme).
   It prints the sidebar width and whether the nav is compact.
-- Until nixe-core's nixe-eds is published, Cargo.toml points at the sibling checkout
-  with a `file://` git URL; CI refuses that on purpose.
+- Shared crates come from nixe-core on GitHub, pinned by `rev` (Cargo.toml and
+  Cargo.lock). To build against unpushed nixe-core changes, push them first and bump the
+  rev; never commit a `file://` source (CI refuses it, and the one-line install can't fetch it).
 - `apps/calendard` (`nixe-calendard`): GTK-free user service. EDS's `EReminderWatcher`
   (through `nixe_eds::Reminders`) → org.freedesktop.Notifications with Open, Snooze
   10 min, Dismiss; quiet while `evolution-alarm-notify` runs. Writes
