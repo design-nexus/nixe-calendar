@@ -1,7 +1,7 @@
 # Calendar
 
-A calendar for Omarchy: the calendars from your Google, Nextcloud and other online
-accounts, and calendars kept on this computer, in one week view. Part of the
+A calendar for Omarchy: the calendars from your Google, Microsoft 365, Outlook.com,
+Nextcloud and other online accounts, and calendars kept on this computer, in one week view. Part of the
 [Nixe](https://github.com/design-nexus/nixe) apps.
 
 - Day, week, month and agenda views, with a month in the sidebar
@@ -15,7 +15,8 @@ accounts, and calendars kept on this computer, in one week view. Part of the
 - Follows your Omarchy theme; works from the keyboard and tiled at half-screen
 
 Accounts are added in **Settings → Online Accounts**. Calendar data is kept by
-Evolution Data Server, so it stays on this computer and syncs with your accounts.
+Evolution Data Server, so it stays on this computer and syncs with your accounts. Microsoft 365
+and Outlook.com calendars need the `evolution-ews` package.
 
 ## Install
 

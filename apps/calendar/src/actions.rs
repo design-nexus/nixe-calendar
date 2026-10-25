@@ -18,7 +18,8 @@ pub fn create(calendar: String, draft: Draft, after: impl FnOnce(Result<String, 
 pub fn save(event: &Event, draft: Draft) {
     let event = event.clone();
     if event.repeats {
-        ask_scope("Change a repeating event", "Change", move |scope| save_scoped(event.clone(), draft.clone(), scope));
+        let following = splits(&event);
+        ask_scope("Change a repeating event", "Change", following, move |scope| save_scoped(event.clone(), draft.clone(), scope));
     } else {
         save_scoped(event, draft, Scope::All);
     }
@@ -73,7 +74,8 @@ fn shifted(series: When, old: When, new: When) -> When {
 pub fn delete(event: &Event) {
     let event = event.clone();
     if event.repeats {
-        ask_scope("Delete a repeating event", "Delete", move |scope| delete_scoped(event.clone(), scope));
+        let following = splits(&event);
+        ask_scope("Delete a repeating event", "Delete", following, move |scope| delete_scoped(event.clone(), scope));
     } else {
         delete_scoped(event, Scope::All);
     }
@@ -215,11 +217,21 @@ pub fn import_file(path: &std::path::Path) {
     dialog.present();
 }
 
-/// "This event / This and following / All events" for a repeating event.
-fn ask_scope(title: &str, verb: &str, then: impl Fn(Scope) + 'static) {
+/// Whether the event's calendar can change "this and following" occurrences.
+fn splits(event: &Event) -> bool {
+    !window::calendars().iter().any(|c| c.uid == event.calendar && c.no_following)
+}
+
+/// "This event / This and following / All events" for a repeating event
+/// (without the middle one where the calendar can't do it).
+fn ask_scope(title: &str, verb: &str, following: bool, then: impl Fn(Scope) + 'static) {
     let (dialog, card) = widgets::dialog(title, 480);
-    let note =
-        widgets::label(&format!("{verb} only this occurrence, this one and the ones after it, or every occurrence?"), "dim");
+    let question = if following {
+        format!("{verb} only this occurrence, this one and the ones after it, or every occurrence?")
+    } else {
+        format!("{verb} only this occurrence, or every occurrence?")
+    };
+    let note = widgets::label(&question, "dim");
     note.set_xalign(0.0);
     note.set_wrap(true);
     card.append(&note);
@@ -235,6 +247,9 @@ fn ask_scope(title: &str, verb: &str, then: impl Fn(Scope) + 'static) {
     for (label, scope) in
         [("This event", Scope::This), ("This and following", Scope::ThisAndFollowing), ("All events", Scope::All)]
     {
+        if scope == Scope::ThisAndFollowing && !following {
+            continue;
+        }
         let button = gtk::Button::with_label(label);
         if scope == Scope::This {
             button.add_css_class("suggested-action");

@@ -35,6 +35,8 @@ pub struct CalendarInfo {
     pub offline: bool,
     /// Events can't be added or changed here (subscriptions, shared calendars).
     pub read_only: bool,
+    /// Its backend can't change "this and following" occurrences (Microsoft 365).
+    pub no_following: bool,
 }
 
 impl CalendarInfo {

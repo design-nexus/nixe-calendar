@@ -336,6 +336,7 @@ fn calendar_list(state: &State) -> Vec<CalendarInfo> {
                 needs_sign_in: s.account.as_ref().is_some_and(|a| attention.contains(a)),
                 offline: open.is_some_and(|c| !c.online()),
                 read_only: open.is_some_and(|c| c.read_only()) || s.backend == "contacts",
+                no_following: open.is_some_and(|c| c.can("no-thisandfuture")),
                 uid: s.uid,
                 color: s.color,
                 selected: s.selected,

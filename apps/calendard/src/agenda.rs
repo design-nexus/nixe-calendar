@@ -123,6 +123,7 @@ mod tests {
             needs_sign_in: false,
             offline: false,
             read_only: false,
+            no_following: false,
         }];
         let events = vec![
             event(

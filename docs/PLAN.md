@@ -43,7 +43,7 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 - [x] Meeting links (Meet, Zoom, Teams, Jitsi, Whereby, Webex): Join in the popover (J) and on alerts
 - [x] Locations: open on OpenStreetMap (until Nixe Maps exists)
 - [x] Optional reminders overlay from EDS task lists (Settings → Working hours)
-- [ ] Microsoft 365 through `evolution-ews`
+- [x] Microsoft 365 and Outlook.com through `evolution-ews` (needs the package; "this and following" is hidden where the backend can't do it)
 
 ## Out of scope
 

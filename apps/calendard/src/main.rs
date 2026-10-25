@@ -170,6 +170,7 @@ fn write_agenda() -> Result<usize, String> {
                 needs_sign_in: false,
                 offline: false,
                 read_only: false,
+                no_following: false,
             })
             .collect();
         let mut events: Vec<Event> = Vec::new();
