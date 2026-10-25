@@ -16,7 +16,8 @@ Nextcloud and other online accounts, and calendars kept on this computer, in one
 
 Accounts are added in **Settings → Online Accounts**. Calendar data is kept by
 Evolution Data Server, so it stays on this computer and syncs with your accounts. Microsoft 365
-and Outlook.com calendars need the `evolution-ews` package.
+and Outlook.com calendars need the `evolution-ews` package, or [`evolution-ews-backends`](https://github.com/design-nexus/nixe-core/tree/main/packaging/evolution-ews-backends),
+which is the same without the Evolution app.
 
 ## Install
 
