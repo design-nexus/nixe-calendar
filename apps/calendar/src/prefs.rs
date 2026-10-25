@@ -28,6 +28,16 @@ pub struct Prefs {
     pub sets: Vec<CalendarSet>,
     /// Show reminders with a due date (from the task lists) in the views.
     pub show_reminders: bool,
+    /// How long a new event lasts, in minutes.
+    pub event_minutes: i64,
+    /// The alert a new timed event gets (minutes before; none when empty).
+    pub default_alert: Option<i64>,
+    /// The calendar new events go to; empty: the last one used.
+    pub new_events_calendar: String,
+    /// Show invitations the user said no to.
+    pub show_declined: bool,
+    /// The view Calendar opens on: `day`, `week`, `month`, `year` or `agenda`.
+    pub open_view: String,
 }
 
 /// Calendars shown together ("Work", "Family").
@@ -54,6 +64,11 @@ impl Default for Prefs {
             working_hours: Default::default(),
             sets: Vec::new(),
             show_reminders: false,
+            event_minutes: 60,
+            default_alert: None,
+            new_events_calendar: String::new(),
+            show_declined: true,
+            open_view: "week".into(),
         }
     }
 }

@@ -22,7 +22,8 @@ struct Plan {
     repeat: Option<String>,
 }
 
-fn plan(text: &str, parse: &Parse, slot: Option<Slot>) -> Plan {
+/// `length`: how long an event lasts when the text doesn't say.
+fn plan(text: &str, parse: &Parse, slot: Option<Slot>, length: Duration) -> Plan {
     let now = Local::now().naive_local();
     let fallback_day = match slot {
         Some(Slot::At(at)) => at.date(),
@@ -33,11 +34,11 @@ fn plan(text: &str, parse: &Parse, slot: Option<Slot>) -> Plan {
     let span = match (parse.start, slot) {
         (Some(start), _) => {
             let start = day.and_time(start);
-            let end = parse.ends().filter(|e| *e > start).unwrap_or(start + Duration::hours(1));
+            let end = parse.ends().filter(|e| *e > start).unwrap_or(start + length);
             Span::Timed { start, end }
         }
         (None, Some(Slot::At(at))) if parse.date.is_none() => {
-            Span::Timed { start: at, end: at + parse.duration.unwrap_or(Duration::hours(1)) }
+            Span::Timed { start: at, end: at + parse.duration.unwrap_or(length) }
         }
         _ => Span::AllDay { first: day, last: day },
     };
@@ -110,7 +111,7 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
                 None => Local::now().naive_local(),
             };
             let parse = nixe_when::parse(text, now);
-            let main = plan(text, &parse, slot);
+            let main = plan(text, &parse, slot, crate::editor::new_length());
             preview.set_text(&if text.trim().is_empty() {
                 String::new()
             } else {
@@ -120,7 +121,12 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
             while let Some(child) = chips.first_child() {
                 chips.remove(&child);
             }
-            let others: Vec<Plan> = parse.alternatives.iter().map(|alt| plan(text, alt, slot)).filter(|p| *p != main).collect();
+            let others: Vec<Plan> = parse
+                .alternatives
+                .iter()
+                .map(|alt| plan(text, alt, slot, crate::editor::new_length()))
+                .filter(|p| *p != main)
+                .collect();
             chips.set_visible(!others.is_empty());
             if !others.is_empty() {
                 let note = widgets::label("Or did you mean:", "dim");
@@ -156,6 +162,9 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
                 start: Some(Some(start)),
                 end: Some(Some(end)),
                 repeat: plan.repeat.clone().map(Some),
+                alarms: matches!(plan.span, Span::Timed { .. })
+                    .then(|| crate::prefs::get().default_alert.map(|m| vec![m]))
+                    .flatten(),
                 ..Draft::default()
             };
             window::remember_calendar(&uid);
@@ -209,20 +218,20 @@ mod tests {
     fn slot_fills_in_what_the_text_leaves_out() {
         let slot = Some(Slot::At(at(22, 14)));
         let p = nixe_when::parse("Review", at(22, 14));
-        assert_eq!(plan("Review", &p, slot).span, Span::Timed { start: at(22, 14), end: at(22, 15) });
+        assert_eq!(plan("Review", &p, slot, Duration::hours(1)).span, Span::Timed { start: at(22, 14), end: at(22, 15) });
         let p = nixe_when::parse("Lunch at 1pm for 90 min", at(22, 9));
-        let got = plan("Lunch at 1pm for 90 min", &p, Some(Slot::At(at(22, 9))));
+        let got = plan("Lunch at 1pm for 90 min", &p, Some(Slot::At(at(22, 9))), Duration::hours(1));
         assert_eq!(got.title, "Lunch");
         assert_eq!(got.span, Span::Timed { start: at(22, 13), end: at(22, 13) + Duration::minutes(90) });
         let day = NaiveDate::from_ymd_opt(2026, 10, 24).unwrap();
         let p = nixe_when::parse("Hike", day.and_time(NaiveTime::MIN));
-        assert_eq!(plan("Hike", &p, Some(Slot::Day(day))).span, Span::AllDay { first: day, last: day });
+        assert_eq!(plan("Hike", &p, Some(Slot::Day(day)), Duration::hours(1)).span, Span::AllDay { first: day, last: day });
     }
 
     #[test]
     fn repeats_carry_through() {
         let p = nixe_when::parse("Standup every weekday at 9:30", at(21, 10));
-        let got = plan("Standup every weekday at 9:30", &p, None);
+        let got = plan("Standup every weekday at 9:30", &p, None, Duration::hours(1));
         assert_eq!(got.title, "Standup");
         assert_eq!(got.repeat.as_deref(), Some("FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"));
     }

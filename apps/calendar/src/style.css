@@ -169,3 +169,12 @@ button.destructive {
   font-weight: 600;
   margin-left: 4px;
 }
+
+/* Settings → Calendars: each account's switch, then its calendars under it. */
+.settings-option.account-row .option-title {
+  font-weight: 600;
+}
+
+.settings-option.nested-row {
+  padding-left: 32px;
+}

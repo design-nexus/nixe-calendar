@@ -7,6 +7,7 @@ mod days;
 mod details;
 mod draw;
 mod editor;
+mod menus;
 mod minical;
 mod month;
 mod prefs;

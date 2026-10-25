@@ -39,6 +39,7 @@ impl MonthView {
         let d = data.clone();
         root.set_draw_func(move |area, cr, w, h| draw_month(area, cr, w as f64, h as f64, &mut d.borrow_mut()));
 
+        let menu_hooks = hooks.clone();
         let click = gtk::GestureClick::new();
         let (d, target) = (data.clone(), root.clone());
         click.connect_pressed(move |_, n, x, y| {
@@ -70,6 +71,30 @@ impl MonthView {
             }
         });
         root.add_controller(click);
+
+        let menu = gtk::GestureClick::new();
+        menu.set_button(gtk::gdk::BUTTON_SECONDARY);
+        let (d, hooks, target) = (data.clone(), menu_hooks, root.clone());
+        menu.connect_pressed(move |gesture, _, x, y| {
+            let d = d.borrow();
+            let inside = |(hx, hy, hw, hh): (f64, f64, f64, f64)| x >= hx && x <= hx + hw && y >= hy && y <= hy + hh;
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            if let Some(&(.., index)) = d.hits.iter().find(|h| inside((h.0, h.1, h.2, h.3))) {
+                let event = d.events[index].clone();
+                drop(d);
+                (hooks.event_menu)(target.upcast_ref(), x, y, event);
+                return;
+            }
+            let (cols, rows) = (7.0, d.layout.rows.len().max(1) as f64);
+            let (cw, rh) = (target.width() as f64 / cols, (target.height() as f64 - WEEKDAY_ROW) / rows);
+            let (col, row) = ((x / cw).floor(), ((y - WEEKDAY_ROW) / rh).floor());
+            if col >= 0.0 && row >= 0.0 && (row as usize) < d.layout.rows.len() && col < 7.0 {
+                let date = d.layout.rows[row as usize][col as usize];
+                drop(d);
+                (hooks.empty_menu)(target.upcast_ref(), x, y, Slot::Day(date));
+            }
+        });
+        root.add_controller(menu);
 
         let view = Self { root, data };
         let v = view.clone();

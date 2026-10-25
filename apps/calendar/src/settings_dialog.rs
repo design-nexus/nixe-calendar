@@ -9,9 +9,11 @@ use nixe_ui::settings_card::{self, Spec};
 pub use nixe_ui::settings_card::fit;
 
 const GROUPS: &[(&str, &str, &str)] = &[
-    ("Calendar window", "applications-graphics-symbolic", "Theme, glow, motion"),
-    ("Week", "x-office-calendar-symbolic", "First day, scroll position"),
+    ("Calendar window", "applications-graphics-symbolic", "Opening view, theme, glow, motion"),
+    ("Week", "x-office-calendar-symbolic", "First day, scroll position, declined invitations"),
+    ("New events", "list-add-symbolic", "Calendar, length, alert"),
     ("Working hours", "appointment-soon-symbolic", "Days and hours, reminders in the views"),
+    ("Calendars", "view-calendar-symbolic", "Turn calendars and accounts on or off"),
     ("Calendar sets", "view-list-symbolic", "Groups of calendars"),
     ("Accounts", "system-users-symbolic", "Online accounts in Settings"),
     ("Keyboard", "input-keyboard-symbolic", "Shortcuts"),

@@ -59,6 +59,7 @@ impl DaysView {
         grid.set_draw_func(move |area, cr, w, _| draw_grid(area, cr, w as f64, &mut d.borrow_mut()));
 
         for (area, top) in [(&header, true), (&grid, false)] {
+            let menu_hooks = hooks.clone();
             let click = gtk::GestureClick::new();
             let (d, hooks, target) = (data.clone(), hooks.clone(), area.clone());
             click.connect_pressed(move |gesture, n, x, y| {
@@ -97,6 +98,38 @@ impl DaysView {
                 }
             });
             area.add_controller(click);
+
+            let menu = gtk::GestureClick::new();
+            menu.set_button(gtk::gdk::BUTTON_SECONDARY);
+            let (d, hooks, target) = (data.clone(), menu_hooks, area.clone());
+            menu.connect_pressed(move |gesture, _, x, y| {
+                let d = d.borrow();
+                let hits = if top { &d.header_hits } else { &d.grid_hits };
+                let hit = hits.iter().rev().find(|(hx, hy, hw, hh, _)| x >= *hx && x <= hx + hw && y >= *hy && y <= hy + hh);
+                if let Some(&(.., index)) = hit {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                    let event = d.events[index].clone();
+                    drop(d);
+                    (hooks.event_menu)(target.upcast_ref(), x, y, event);
+                    return;
+                }
+                let col = column_width(target.width() as f64, d.days.len());
+                let day = ((x - GUTTER) / col).floor();
+                if x <= GUTTER || day < 0.0 || day as usize >= d.days.len() {
+                    return;
+                }
+                let date = d.days[day as usize];
+                let slot = if top {
+                    Slot::Day(date)
+                } else {
+                    let minutes = ((y / HOUR * 2.0).floor() * 30.0).clamp(0.0, 23.5 * 60.0) as u32;
+                    Slot::At(date.and_time(NaiveTime::from_hms_opt(minutes / 60, minutes % 60, 0).unwrap_or_default()))
+                };
+                drop(d);
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                (hooks.empty_menu)(target.upcast_ref(), x, y, slot);
+            });
+            area.add_controller(menu);
         }
 
         let view = Self { root, header, grid, scroll, data };

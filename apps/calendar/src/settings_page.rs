@@ -4,12 +4,15 @@ use crate::prefs;
 use crate::theme;
 use crate::widgets::{self, Page};
 use crate::window;
+use crate::{editor, worker};
 use gtk::prelude::*;
 
 pub fn build(page: &Page) {
     window_group(page);
     week(page);
+    new_events(page);
     working(page);
+    calendars(page);
     sets(page);
     accounts(page);
     keyboard(page);
@@ -17,7 +20,13 @@ pub fn build(page: &Page) {
 
 fn window_group(page: &Page) {
     let group = page.group("Calendar window");
-    group.add(&nixe_ui::widgets::start_row());
+    group.add(&widgets::segmented_row(
+        "Open on",
+        "The view Calendar opens on.",
+        widgets::opts(&[("day", "Day"), ("week", "Week"), ("month", "Month"), ("year", "Year"), ("agenda", "Agenda")]),
+        &prefs::get().open_view,
+        |view| prefs::update(|p| p.open_view = view),
+    ));
     let prefs = prefs::get();
     let options: Vec<(String, String)> = theme::all().iter().map(|t| (t.id.clone(), t.name.clone())).collect();
     let (theme_row, theme_dd) =
@@ -75,6 +84,118 @@ fn week(page: &Page) {
             prefs::update(|p| p.day_starts = hour.parse().unwrap_or(8))
         });
     group.add(&row);
+    let (row, _) = widgets::switch_row(
+        "Show declined invitations",
+        "Off: invitations you said no to leave the views.",
+        prefs.show_declined,
+        |on| {
+            prefs::update(|p| p.show_declined = on);
+            window::redraw();
+        },
+    );
+    group.add(&row);
+}
+
+fn new_events(page: &Page) {
+    let group = page.group("New events");
+    let prefs = prefs::get();
+    let mut where_to = vec![(String::new(), "The last one used".to_string())];
+    where_to.extend(
+        window::calendars()
+            .into_iter()
+            .filter(|c| !c.read_only)
+            .map(|c| (c.uid.clone(), format!("{} · {}", c.name, c.group_label()))),
+    );
+    let (row, _) = widgets::choice_row(
+        "Add to",
+        "The calendar new events go to; you can pick another in the editor.",
+        where_to,
+        &prefs.new_events_calendar,
+        |uid| prefs::update(|p| p.new_events_calendar = uid),
+    );
+    group.add(&row);
+    let lengths: Vec<(String, String)> =
+        [15, 30, 45, 60, 90, 120].iter().map(|m| (m.to_string(), editor::duration_text(*m))).collect();
+    let (row, _) = widgets::choice_row(
+        "Length",
+        "How long a new event lasts unless you say (\u{201c}lunch at 1 for 90 minutes\u{201d}).",
+        lengths,
+        &prefs.event_minutes.to_string(),
+        |m| prefs::update(|p| p.event_minutes = m.parse().unwrap_or(60)),
+    );
+    group.add(&row);
+    let mut alerts = vec![("none".to_string(), "None".to_string())];
+    alerts.extend([0i64, 5, 10, 15, 30, 60, 1440].iter().map(|m| (m.to_string(), editor::alert_label(*m))));
+    let (row, _) = widgets::choice_row(
+        "Alert",
+        "The alert a new timed event starts with.",
+        alerts,
+        &prefs.default_alert.map(|m| m.to_string()).unwrap_or_else(|| "none".into()),
+        |m| prefs::update(|p| p.default_alert = m.parse().ok()),
+    );
+    group.add(&row);
+}
+
+/// Calendars switched on or off, by account (off: not loaded or synced, in
+/// every app; switch on again here).
+fn calendars(page: &Page) {
+    let group = page.group("Calendars");
+    group.note("Turn calendars off to stop loading and syncing them, here and in other calendar apps.");
+    let list = group.list.clone();
+    fill_calendars(&list);
+}
+
+fn fill_calendars(list: &gtk::Box) {
+    let list = list.clone();
+    worker::all_calendars(move |all| {
+        while let Some(child) = list.first_child() {
+            list.remove(&child);
+        }
+        let mut groups: Vec<(String, Vec<(nixe_eds::Source, bool)>)> = Vec::new();
+        for (source, on) in all {
+            let label = source.group.clone().unwrap_or_else(|| "On this computer".into());
+            match groups.iter_mut().find(|(g, _)| *g == label) {
+                Some((_, items)) => items.push((source, on)),
+                None => groups.push((label, vec![(source, on)])),
+            }
+        }
+        for (label, items) in groups {
+            let uids: Vec<String> = items.iter().map(|(s, _)| s.uid.clone()).collect();
+            let any_on = items.iter().any(|(_, on)| *on);
+            let l = list.clone();
+            let (row, _) = widgets::switch_row(&label, &format!("{} calendars", items.len()), any_on, move |on| {
+                let (count, done) = (uids.len(), std::rc::Rc::new(std::cell::Cell::new(0)));
+                for uid in &uids {
+                    let (l, done) = (l.clone(), done.clone());
+                    worker::set_enabled(uid.clone(), on, move |r| {
+                        if let Err(e) = r {
+                            window::toast(&e);
+                        }
+                        done.set(done.get() + 1);
+                        if done.get() == count {
+                            fill_calendars(&l);
+                        }
+                    });
+                }
+            });
+            row.add_css_class("account-row");
+            list.append(&row);
+            for (source, on) in items {
+                let (uid, l) = (source.uid.clone(), list.clone());
+                let (row, _) = widgets::switch_row(source.label(), "", on, move |on| {
+                    let l = l.clone();
+                    worker::set_enabled(uid.clone(), on, move |r| {
+                        if let Err(e) = r {
+                            window::toast(&e);
+                        }
+                        fill_calendars(&l);
+                    });
+                });
+                row.add_css_class("nested-row");
+                list.append(&row);
+            }
+        }
+    });
 }
 
 fn working(page: &Page) {

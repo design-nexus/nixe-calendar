@@ -16,11 +16,11 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 gio = "0.22"
 glib = "0.22"
 nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
-nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "60bb4f0183a6b85c47dc09c7501c2c53cec65eb9", default-features = false }
-nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "60bb4f0183a6b85c47dc09c7501c2c53cec65eb9" }
+nixe-core = { git = "file:///home/ken/Projects/nixe-core", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c", default-features = false }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 
 [dev-dependencies]
 gio = "0.22"
 glib = "0.22"
-nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "60bb4f0183a6b85c47dc09c7501c2c53cec65eb9" }
+nixe-eds = { git = "file:///home/ken/Projects/nixe-core", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }

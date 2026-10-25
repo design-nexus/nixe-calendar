@@ -14,6 +14,11 @@
   week (`WeekLayout`); its tests cover overlaps, midnight and all-day lanes.
 - Offline: EDS serves its saved copy; calendars report `online()` and the window shows
   an Offline banner and readout.
+- Right-click menus (`menus.rs`, `widgets::popup_menu`): events and empty time come
+  through `draw::Hooks::event_menu`/`empty_menu` from each view's hit tests; calendars
+  and sets in the sidebar. Turning a calendar off is EDS's `enabled` (every app;
+  `Registry::set_enabled`); Settings → Calendars lists them all (`Registry::all_sources`).
+  New events use prefs `event_minutes`, `default_alert`, `new_events_calendar`.
 - Checks: `cargo test -p nixe-calendar-core -p nixe-calendar` and
   `cargo clippy --workspace --all-targets -- -D warnings`. Layout:
   `CALENDAR_SNAPSHOT=/tmp/cal.png CALENDAR_SNAPSHOT_W=800 nixe-calendar` under scratch

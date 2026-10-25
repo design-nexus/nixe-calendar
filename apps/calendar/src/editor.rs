@@ -107,7 +107,7 @@ fn time_entry(time: NaiveTime) -> gtk::Entry {
 }
 
 /// "30 minutes", "1 hour", "1 h 30 min".
-fn duration_text(minutes: i64) -> String {
+pub fn duration_text(minutes: i64) -> String {
     match (minutes / 60, minutes % 60) {
         (0, m) => format!("{m} minutes"),
         (1, 0) => "1 hour".into(),
@@ -139,7 +139,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         .as_ref()
         .map(|e| e.span)
         .or(start.span)
-        .unwrap_or(Span::Timed { start: default_start, end: default_start + Duration::hours(1) });
+        .unwrap_or(Span::Timed { start: default_start, end: default_start + new_length() });
     let (mut from_date, mut to_date, from_time, to_time, all_day) = match span {
         Span::AllDay { first, last } => (
             first,
@@ -408,7 +408,12 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         }
         list
     };
-    let original_alert = event.as_ref().and_then(|e| e.alarms.first().copied());
+    // A new timed event starts with Settings' alert.
+    let original_alert = match &event {
+        Some(e) => e.alarms.first().copied(),
+        None if !all_day => crate::prefs::get().default_alert,
+        None => None,
+    };
     let alert_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     let alert_choice = Rc::new(RefCell::new(widgets::dropdown(
         &alert_options(all_day),
@@ -555,10 +560,15 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     focus.grab_focus();
 }
 
+/// How long a new event lasts (Settings → New events).
+pub fn new_length() -> Duration {
+    Duration::minutes(crate::prefs::get().event_minutes.clamp(5, 24 * 60))
+}
+
 /// A new event's start for a slot the user double-clicked.
 pub fn start_at(slot: draw::Slot) -> Start {
     match slot {
-        draw::Slot::At(at) => Start { span: Some(Span::Timed { start: at, end: at + Duration::hours(1) }), ..Start::default() },
+        draw::Slot::At(at) => Start { span: Some(Span::Timed { start: at, end: at + new_length() }), ..Start::default() },
         draw::Slot::Day(day) => Start { span: Some(Span::AllDay { first: day, last: day }), ..Start::default() },
     }
 }

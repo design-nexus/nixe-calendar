@@ -28,7 +28,14 @@ pub struct Hooks {
     pub empty: At<Slot>,
     /// A day's number (or "+N more") was clicked.
     pub day: Box<dyn Fn(chrono::NaiveDate)>,
+    /// An event was right-clicked, at a point in the widget.
+    pub event_menu: Menu<Event>,
+    /// Empty space was right-clicked.
+    pub empty_menu: Menu<Slot>,
 }
+
+/// A callback given the widget and the point a menu opens at.
+pub type Menu<T> = Box<dyn Fn(&gtk::Widget, f64, f64, T)>;
 
 pub struct Colors {
     pub bg: Rgb,

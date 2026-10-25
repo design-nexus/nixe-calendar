@@ -111,10 +111,12 @@ impl AgendaView {
         content.append(&text);
         row.set_child(Some(&content));
         let (hooks, event) = (self.hooks.clone(), event.clone());
+        let (menu_hooks, menu_event) = (hooks.clone(), event.clone());
         row.connect_clicked(move |button| {
             let rect = gtk::gdk::Rectangle::new(0, 0, button.width(), button.height());
             (hooks.event)(button.upcast_ref(), rect, event.clone());
         });
+        widgets::on_right_click(&row, move |w, x, y| (menu_hooks.event_menu)(w, x, y, menu_event.clone()));
         row
     }
 }

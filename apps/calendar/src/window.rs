@@ -152,6 +152,10 @@ pub fn me() -> Vec<String> {
 /// The calendar new events go to: the last one used, else the first writable shown one.
 pub fn default_calendar() -> String {
     let list = calendars();
+    let chosen = prefs::get().new_events_calendar;
+    if list.iter().any(|c| c.uid == chosen && !c.read_only) {
+        return chosen;
+    }
     let last = prefs::get().last_calendar;
     if list.iter().any(|c| c.uid == last && !c.read_only) {
         return last;
@@ -172,7 +176,7 @@ pub fn present(app: &gtk::Application, section: Option<&str>) {
     if first {
         build(app);
         worker::start();
-        let view = ViewKind::from_id(&nixe_theme::start_page("week", &prefs::get().view));
+        let view = ViewKind::from_id(&prefs::get().open_view);
         set_view(view);
     }
     let Some(ui) = ui() else { return };
@@ -269,7 +273,7 @@ pub fn apply(update: Update) {
     redraw();
 }
 
-fn redraw() {
+pub(crate) fn redraw() {
     rebuild_nav();
     rebuild_banners();
     show_view();
@@ -282,8 +286,10 @@ fn calendar_map(list: &[CalendarInfo]) -> Calendars {
 
 fn filtered(events: &[Event], query: &str) -> Vec<Event> {
     let q = query.trim().to_lowercase();
+    let (declined, me) = (prefs::get().show_declined, me());
     events
         .iter()
+        .filter(|e| declined || e.invitation(&me).is_none_or(|a| a.response != nixe_eds::Response::Declined))
         .filter(|e| {
             q.is_empty()
                 || e.title.to_lowercase().contains(&q)
@@ -439,7 +445,7 @@ pub fn go_to_today() {
     go_to(Local::now().date_naive());
 }
 
-fn set_view(view: ViewKind) {
+pub(crate) fn set_view(view: ViewKind) {
     let Some(ui) = ui() else { return };
     let anchor = ui.borrow().anchor;
     ui.borrow_mut().view = view;
@@ -565,7 +571,7 @@ pub fn open_online_accounts() {
 }
 
 /// Quick create from the toolbar's + (or N).
-fn new_event() {
+pub(crate) fn new_event() {
     let Some(ui) = ui() else { return };
     let button = ui.borrow().new_button.clone();
     let rect = gdk::Rectangle::new(0, 0, button.width(), button.height());
@@ -678,6 +684,7 @@ fn calendar_button(cal: &CalendarInfo) -> gtk::Button {
     let uid = cal.uid.clone();
     let selected = cal.selected;
     button.connect_clicked(move |_| worker::set_selected(uid.clone(), !selected));
+    crate::menus::attach_calendar(&button, cal);
     button
 }
 
@@ -745,6 +752,7 @@ fn rebuild_nav() {
             if !all && want == now {
                 button.add_css_class("active");
             }
+            crate::menus::attach_set(&button, &set);
             let set = set.clone();
             button.connect_clicked(move |_| show_set(Some(&set)));
             list.append(&button);
@@ -789,6 +797,8 @@ fn hooks() -> Rc<Hooks> {
             set_view(ViewKind::Day);
             go_to(date);
         }),
+        event_menu: Box::new(crate::menus::event),
+        empty_menu: Box::new(crate::menus::empty),
     })
 }
 
@@ -1207,7 +1217,7 @@ fn show_toast(message: &str, undo: Option<Box<dyn Fn()>>) {
 
 /// Shows a set's calendars and hides the rest (every calendar for `None`).
 /// Which calendars show is EDS's, so other calendar apps follow.
-fn show_set(set: Option<&prefs::CalendarSet>) {
+pub(crate) fn show_set(set: Option<&prefs::CalendarSet>) {
     for cal in calendars() {
         let want = set.is_none_or(|s| s.calendars.contains(&cal.uid));
         if want != cal.selected {

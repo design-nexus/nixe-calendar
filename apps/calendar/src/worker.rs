@@ -192,6 +192,42 @@ pub fn set_selected(uid: String, selected: bool) {
 }
 
 /// Asks every open calendar to sync with its server now; replies with problems.
+/// Switches a calendar on or off for every app.
+pub fn set_enabled(uid: String, enabled: bool, reply: impl FnOnce(Result<(), String>) + 'static) {
+    ask(
+        move || {
+            let r = STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.set_enabled(&uid, enabled)));
+            schedule_sources();
+            match r {
+                Some(Ok(())) => Ok(()),
+                Some(Err(e)) => Err(e.to_string()),
+                None => Err("Calendar data isn't available.".into()),
+            }
+        },
+        reply,
+    );
+}
+
+pub fn set_color(uid: String, color: String, reply: impl FnOnce(Result<(), String>) + 'static) {
+    ask(
+        move || {
+            let r = STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.set_color(&uid, Kind::Calendar, &color)));
+            schedule_sources();
+            match r {
+                Some(Ok(())) => Ok(()),
+                Some(Err(e)) => Err(e.to_string()),
+                None => Err("Calendar data isn't available.".into()),
+            }
+        },
+        reply,
+    );
+}
+
+/// Every calendar, with whether it's switched on (Settings → Calendars).
+pub fn all_calendars(reply: impl FnOnce(Vec<(nixe_eds::Source, bool)>) + 'static) {
+    ask(|| STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.all_sources(Kind::Calendar)).unwrap_or_default()), reply);
+}
+
 pub fn refresh(reply: impl FnOnce(Vec<String>) + 'static) {
     ask(
         || {
