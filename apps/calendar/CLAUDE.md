@@ -31,7 +31,7 @@
   (through `nixe_eds::Reminders`) → org.freedesktop.Notifications with Open, Snooze
   10 min, Dismiss; quiet while `evolution-alarm-notify` runs. Writes
   `~/.local/share/nixe-calendar/agenda.sqlite` (schema in `agenda.rs`; a contract for
-  Glimpse). The installer enables the unit without starting it; the app starts it on
+  Glimpse). The installer enables and starts the unit; the app also starts it on
   open. `nixe-calendard --write-agenda` writes once. End to end:
   `tools/test-calendard.sh` (scratch EDS, fake notification server).
 - Views: `days.rs` (day and week), `month.rs`, `agenda.rs` (also year-wide search
