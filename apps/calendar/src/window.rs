@@ -1084,7 +1084,9 @@ fn status_bar() -> gtk::Box {
     STATUS.with(|s| *s.borrow_mut() = Some(readout.clone()));
     bar.append(&readout);
     bar.append(&chrome::status_action("document-open-symbolic", "Import an .ics file (Ctrl+I)", actions::import_dialog));
-    bar.append(&chrome::gear(settings_dialog::open));
+    let gear = chrome::gear(settings_dialog::open);
+    gear.update_property(&[gtk::accessible::Property::Label("Settings")]);
+    bar.append(&gear);
     bar
 }
 
