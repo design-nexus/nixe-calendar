@@ -234,6 +234,7 @@ mod tests {
             completed: None,
             priority: None,
             url: None,
+            categories: Vec::new(),
             parent: None,
             repeats: false,
             rule: None,

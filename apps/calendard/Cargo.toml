@@ -17,10 +17,10 @@ gio = "0.22"
 glib = "0.22"
 nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
 nixe-core = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c", default-features = false }
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
+nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 
 [dev-dependencies]
 gio = "0.22"
 glib = "0.22"
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
+nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }

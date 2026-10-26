@@ -55,3 +55,7 @@
   written through `Draft::zone`. Views show local time.
 - Account groups in the sidebar fold (prefs `collapsed_groups`, by heading). A banner shows
   for GOA `ms_graph`/`exchange` accounts when evolution-ews's EDS backends are missing.
+- Find a time takes people (its "With" line): `Calendar::free_busy` on the editor's chosen
+  calendar asks its server (Exchange/Microsoft 365, CalDAV with scheduling) for their busy
+  times, merged into `plan::suggest`. It doesn't invite them; the editor has no attendees yet.
+  nixe-eds is pinned to a newer nixe-core commit than nixe-core/nixe-accounts.

@@ -658,7 +658,7 @@ dependencies = [
 [[package]]
 name = "nixe-camel-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 
 [[package]]
 name = "nixe-core"
@@ -675,7 +675,7 @@ dependencies = [
 [[package]]
 name = "nixe-ecal-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -690,7 +690,7 @@ dependencies = [
 [[package]]
 name = "nixe-edataserver-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -706,7 +706,7 @@ dependencies = [
 [[package]]
 name = "nixe-eds"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 dependencies = [
  "gio-sys",
  "glib",
@@ -721,7 +721,7 @@ dependencies = [
 [[package]]
 name = "nixe-icalglib-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -733,7 +733,7 @@ dependencies = [
 [[package]]
 name = "nixe-json-glib-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -745,7 +745,7 @@ dependencies = [
 [[package]]
 name = "nixe-libxml2-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
 
 [[package]]
 name = "nixe-theme"

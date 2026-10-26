@@ -377,6 +377,10 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
         let (timed, ignore, zone) = (timed.clone(), ignore.clone(), zone.clone());
         let (sd, ed, st, et) = (start_date.date.clone(), end_date.clone(), start_time.clone(), end_time.clone());
         let start_button = start_date.button.clone();
+        // People to find a time with: their busy times come from the chosen
+        // calendar's server, when it shares them.
+        let people: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
+        let (calendar_choice, calendars) = (calendar.clone(), writable.clone());
         find.set_create_popup_func(move |button| {
             let list = gtk::Box::new(gtk::Orientation::Vertical, 2);
             list.add_css_class("menu-list");
@@ -384,18 +388,77 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
             popover.set_child(Some(&list));
             button.set_popover(Some(&popover));
             let minutes = timed().map(|(s, e)| (e - s).num_minutes()).unwrap_or(60).clamp(5, 12 * 60);
+            let with = gtk::Entry::new();
+            with.set_placeholder_text(Some("With: sam@example.com, …"));
+            with.update_property(&[gtk::accessible::Property::Label("Find a time with these people")]);
+            with.set_tooltip_text(Some("Their busy times too (Enter), when the calendar's server shares them"));
+            with.set_text(&people.borrow());
+            {
+                let (people, button) = (people.clone(), button.clone());
+                with.connect_activate(move |e| {
+                    *people.borrow_mut() = e.text().trim().to_string();
+                    button.popdown();
+                    button.popup();
+                });
+            }
+            list.append(&with);
             list.append(&widgets::label(&format!("Free for {}", duration_text(minutes)), "dim"));
             let now = Local::now().naive_local();
+            let wanted: Vec<String> = people
+                .borrow()
+                .split([',', ' ', ';'])
+                .map(|p| p.trim().trim_start_matches("mailto:").to_string())
+                .filter(|p| p.contains('@'))
+                .collect();
+            let server = calendars.get(calendar_choice.selected() as usize).map(|(uid, _)| uid.clone()).unwrap_or_default();
             let after = sd.get().and_time(NaiveTime::MIN).max(now);
             let hours = crate::prefs::get().working_hours;
             let ignore = ignore.clone();
             let (sd, ed, st, et, start_button, popover, zone) =
                 (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone(), zone.clone());
+            let until = after + Duration::days(14);
             worker::ask(
-                move || worker::events_between(after.date(), after.date() + Duration::days(14)),
-                move |events| {
+                move || {
+                    let events = worker::events_between(after.date(), until.date());
+                    let theirs = if wanted.is_empty() {
+                        Ok(Vec::new())
+                    } else {
+                        let stamp = |t: NaiveDateTime| nixe_calendar_core::timestamp(t);
+                        worker::with_calendar(&server, |c| c.free_busy(stamp(after), stamp(until), &wanted))
+                    };
+                    (events, theirs, wanted)
+                },
+                move |(events, theirs, wanted)| {
                     let skip = ignore.as_ref().map(|(u, r)| (u.as_str(), r.as_deref()));
-                    let busy = nixe_calendar_core::plan::busy(&events, skip);
+                    let mut busy = nixe_calendar_core::plan::busy(&events, skip);
+                    match theirs {
+                        Ok(found) => {
+                            let local = |secs: i64| {
+                                chrono::DateTime::from_timestamp(secs, 0).map(|t| t.with_timezone(&Local).naive_local())
+                            };
+                            for (_, times) in &found {
+                                busy.extend(times.iter().filter_map(|(a, b)| Some((local(*a)?, local(*b)?))));
+                            }
+                            let missing: Vec<&str> = wanted
+                                .iter()
+                                .filter(|w| !found.iter().any(|(who, _)| who.eq_ignore_ascii_case(w)))
+                                .map(String::as_str)
+                                .collect();
+                            if !missing.is_empty() {
+                                let note = widgets::label(&format!("No free/busy times for {}.", missing.join(", ")), "dim");
+                                note.set_wrap(true);
+                                note.set_max_width_chars(40);
+                                list.append(&note);
+                            }
+                        }
+                        Err(err) => {
+                            let note = widgets::label(&format!("Couldn't get their busy times: {err}"), "dim");
+                            note.set_wrap(true);
+                            note.set_max_width_chars(40);
+                            list.append(&note);
+                        }
+                    }
+                    busy.sort();
                     let times = nixe_calendar_core::plan::suggest(&busy, after, minutes, &hours, 8, 14);
                     if times.is_empty() {
                         list.append(&widgets::label("Nothing free in working hours in the next two weeks.", "dim"));
