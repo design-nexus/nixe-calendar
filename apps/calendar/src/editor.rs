@@ -116,6 +116,36 @@ pub fn duration_text(minutes: i64) -> String {
     }
 }
 
+/// An event's time zone, when it isn't this computer's; `None` means local time.
+type Zone = Rc<Cell<Option<chrono_tz::Tz>>>;
+
+/// A local time as the clock reads in `zone`.
+fn to_zone(local: NaiveDateTime, zone: Option<chrono_tz::Tz>) -> NaiveDateTime {
+    use chrono::TimeZone;
+    match zone {
+        Some(tz) => Local.from_local_datetime(&local).earliest().map(|t| t.with_timezone(&tz).naive_local()).unwrap_or(local),
+        None => local,
+    }
+}
+
+/// A clock time in `zone` as local time.
+fn from_zone(wall: NaiveDateTime, zone: Option<chrono_tz::Tz>) -> NaiveDateTime {
+    use chrono::TimeZone;
+    match zone {
+        Some(tz) => tz.from_local_datetime(&wall).earliest().map(|t| t.with_timezone(&Local).naive_local()).unwrap_or(wall),
+        None => wall,
+    }
+}
+
+/// The IANA zone of an event's start, from its iCalendar text: a TZID that
+/// names one, or ends in one (EDS writes `/freeassociation.sourceforge.net/…/Europe/Paris`).
+fn zone_in_ics(ics: &str) -> Option<chrono_tz::Tz> {
+    let line = ics.lines().find(|l| l.starts_with("DTSTART;"))?;
+    let tzid = line.split([';', ':']).find_map(|p| p.strip_prefix("TZID="))?.trim_matches('"');
+    let parts: Vec<&str> = tzid.split('/').filter(|p| !p.is_empty()).collect();
+    (0..parts.len()).find_map(|i| parts[i..].join("/").parse().ok())
+}
+
 fn labeled(text: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     row.add_css_class("editor-row");
@@ -124,6 +154,7 @@ fn labeled(text: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
     label.set_width_chars(9);
     row.append(&label);
     widget.set_hexpand(true);
+    widget.as_ref().update_relation(&[gtk::accessible::Relation::LabelledBy(&[label.upcast_ref()])]);
     row.append(widget);
     row
 }
@@ -169,6 +200,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
 
     let title = gtk::Entry::new();
     title.set_placeholder_text(Some("Title"));
+    title.update_property(&[gtk::accessible::Property::Label("Title")]);
     title.add_css_class("editor-title");
     title.set_text(event.as_ref().map(|e| e.title.as_str()).unwrap_or(&start.title));
     card.append(&title);
@@ -179,8 +211,6 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     if calendar.selected() == gtk::INVALID_LIST_POSITION {
         calendar.set_selected(0);
     }
-    // Moving an event between calendars isn't offered yet.
-    calendar.set_sensitive(event.is_none());
     card.append(&labeled("Calendar", &calendar));
 
     let all_day_switch = gtk::Switch::new();
@@ -208,11 +238,61 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     ends.append(&end_date.button);
     ends.append(&end_time);
     card.append(&labeled("Ends", &ends));
+
+    // The times above are as the clock reads in this zone: this computer's, or
+    // the event's own (read from it below), or one the user picks.
+    let zone: Zone = Rc::new(Cell::new(None));
+    let local_zone = nixe_eds::local_zone();
+    let zone_names: Vec<&str> = chrono_tz::TZ_VARIANTS.iter().map(|z| z.name()).collect();
+    let zone_choice = gtk::DropDown::new(
+        Some(gtk::StringList::new(&zone_names)),
+        Some(gtk::PropertyExpression::new(gtk::StringObject::static_type(), None::<gtk::Expression>, "string")),
+    );
+    zone_choice.set_enable_search(true);
+    zone_choice.set_tooltip_text(Some("The time zone the times are in (type to search)"));
+    let position_of = move |name: &str| chrono_tz::TZ_VARIANTS.iter().position(|z| z.name() == name).map(|p| p as u32);
+    zone_choice.set_selected(position_of(&local_zone).unwrap_or(gtk::INVALID_LIST_POSITION));
     {
-        let (a, b) = (start_time.clone(), end_time.clone());
+        let (zone, local_zone) = (zone.clone(), local_zone.clone());
+        zone_choice.connect_selected_notify(move |d| {
+            let picked = chrono_tz::TZ_VARIANTS.get(d.selected() as usize).copied();
+            zone.set(picked.filter(|tz| tz.name() != local_zone));
+        });
+    }
+    let zone_row = labeled("Time zone", &zone_choice);
+    card.append(&zone_row);
+    if let Some(e) = event.as_ref().filter(|e| matches!(e.span, Span::Timed { .. })) {
+        // Shows an event kept in another zone in that zone's time.
+        let (calendar, uid, rid) = (e.calendar.clone(), e.uid.clone(), e.rid.clone());
+        let (zc, sd, ed, st, et) =
+            (zone_choice.clone(), start_date.date.clone(), end_date.clone(), start_time.clone(), end_time.clone());
+        let start_button = start_date.button.clone();
+        let (span, local_zone) = (e.span, local_zone.clone());
+        worker::ask(
+            move || worker::with_calendar(&calendar, |c| c.ics(&uid, rid.as_deref())).ok().and_then(|ics| zone_in_ics(&ics)),
+            move |found| {
+                let (Some(tz), Span::Timed { start, end }) = (found, span) else { return };
+                if tz.name() == local_zone {
+                    return;
+                }
+                if let Some(p) = position_of(tz.name()) {
+                    zc.set_selected(p);
+                }
+                let (s, e) = (to_zone(start, Some(tz)), to_zone(end, Some(tz)));
+                sd.set(s.date());
+                start_button.set_label(&s.date().format("%a, %b %-d, %Y").to_string());
+                ed.set(e.date());
+                st.set_text(&draw::time_text(s.time()));
+                et.set_text(&draw::time_text(e.time()));
+            },
+        );
+    }
+    {
+        let (a, b, z) = (start_time.clone(), end_time.clone(), zone_row.clone());
         let show = move |all_day: bool| {
             a.set_visible(!all_day);
             b.set_visible(!all_day);
+            z.set_visible(!all_day);
         };
         show(all_day);
         all_day_switch.connect_active_notify(move |s| show(s.is_active()));
@@ -227,18 +307,22 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     let find = gtk::MenuButton::new();
     find.set_icon_name("appointment-soon-symbolic");
     find.set_tooltip_text(Some("Find a time: free times this long, within working hours"));
+    find.update_property(&[gtk::accessible::Property::Label("Find a time")]);
     find.set_has_frame(false);
     starts.append(&find);
     let ignore = event.as_ref().map(|e| (e.uid.clone(), e.rid.clone()));
+    // The times entered, in local time.
     let timed = {
         let (sd, ed, st, et, sw) =
             (start_date.date.clone(), end_date.date.clone(), start_time.clone(), end_time.clone(), all_day_switch.clone());
+        let zone = zone.clone();
         Rc::new(move || -> Option<(NaiveDateTime, NaiveDateTime)> {
             if sw.is_active() {
                 return None;
             }
             let (a, b) = (parse_time(&st.text())?, parse_time(&et.text())?);
             let (s, e) = (sd.get().and_time(a), ed.get().max(sd.get()).and_time(b));
+            let (s, e) = (from_zone(s, zone.get()), from_zone(e, zone.get()));
             (e > s).then_some((s, e))
         })
     };
@@ -281,6 +365,8 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     {
         let c = check.clone();
         all_day_switch.connect_active_notify(move |_| c());
+        let c = check.clone();
+        zone_choice.connect_selected_notify(move |_| c());
         for button in [&start_date.button, &end_date.button] {
             let c = check.clone();
             button.connect_label_notify(move |_| c());
@@ -288,7 +374,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     }
     check();
     {
-        let (timed, ignore) = (timed.clone(), ignore.clone());
+        let (timed, ignore, zone) = (timed.clone(), ignore.clone(), zone.clone());
         let (sd, ed, st, et) = (start_date.date.clone(), end_date.clone(), start_time.clone(), end_time.clone());
         let start_button = start_date.button.clone();
         find.set_create_popup_func(move |button| {
@@ -303,8 +389,8 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
             let after = sd.get().and_time(NaiveTime::MIN).max(now);
             let hours = crate::prefs::get().working_hours;
             let ignore = ignore.clone();
-            let (sd, ed, st, et, start_button, popover) =
-                (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone());
+            let (sd, ed, st, et, start_button, popover, zone) =
+                (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone(), zone.clone());
             worker::ask(
                 move || worker::events_between(after.date(), after.date() + Duration::days(14)),
                 move |events| {
@@ -323,7 +409,9 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                         item.add_css_class("menu-item");
                         let (sd, ed, st, et, sb, p) =
                             (sd.clone(), ed.clone(), st.clone(), et.clone(), start_button.clone(), popover.clone());
+                        let zone = zone.clone();
                         item.connect_clicked(move |_| {
+                            let (t, end) = (to_zone(t, zone.get()), to_zone(end, zone.get()));
                             sd.set(t.date());
                             sb.set_label(&t.date().format("%a, %b %-d, %Y").to_string());
                             ed.set(end.date());
@@ -477,7 +565,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                 window::toast("Enter times like 2:30 PM or 14:30.");
                 return;
             };
-            let (s, mut e) = (first.and_time(a), last.and_time(b));
+            let (s, mut e) = (from_zone(first.and_time(a), zone.get()), from_zone(last.and_time(b), zone.get()));
             if e < s {
                 e = s + Duration::hours(1);
             }
@@ -511,6 +599,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                 draft.summary = Some(title_text);
                 draft.start = Some(Some(new_start));
                 draft.end = Some(Some(new_end));
+                draft.zone = zone.get().map(|tz| tz.name().to_string());
                 draft.repeat = rule.map(Some);
                 draft.alarms = alert.map(|m| vec![m]);
                 draft.location = Some(location.text().to_string()).filter(|l| !l.is_empty());
@@ -531,6 +620,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                 if span != original.span {
                     draft.start = Some(Some(new_start));
                     draft.end = Some(Some(new_end));
+                    draft.zone = zone.get().map(|tz| tz.name().to_string());
                 }
                 if rule != original.rule && !(rule.is_none() && original.rule.is_none()) {
                     draft.repeat = Some(rule);
@@ -547,11 +637,16 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                 if Some(link_text.as_str()) != original.url.as_deref().or(Some("")) {
                     draft.url = Some(Some(link_text).filter(|u| !u.is_empty()));
                 }
-                if draft == Draft::default() {
-                    d.close();
-                    return;
+                // Moving runs first on the worker, so the changes are saved where the event went.
+                let mut original = original.clone();
+                if let Some((target, _)) = writable.get(calendar.selected() as usize).filter(|(uid, _)| *uid != original.calendar)
+                {
+                    actions::move_to(&original, target.clone());
+                    original.calendar = target.clone();
                 }
-                actions::save(original, draft);
+                if draft != Draft::default() {
+                    actions::save(&original, draft);
+                }
             }
         }
         d.close();
@@ -585,5 +680,27 @@ mod tests {
         assert_eq!(alert_label(120), "2 hours before");
         assert_eq!(alert_label(1440), "1 day before");
         assert_eq!(alert_label(-540), "On the day at 9 AM");
+    }
+}
+
+#[cfg(test)]
+mod zone_tests {
+    use super::*;
+
+    #[test]
+    fn reads_event_zones() {
+        let ics = "BEGIN:VEVENT\nUID:a\nDTSTART;TZID=/freeassociation.sourceforge.net/Tzfile/Asia/Tokyo:20261030T090000\nEND:VEVENT";
+        assert_eq!(zone_in_ics(ics), Some(chrono_tz::Asia::Tokyo));
+        assert_eq!(zone_in_ics("DTSTART;VALUE=DATE-TIME;TZID=\"Europe/Paris\":20261030T090000"), Some(chrono_tz::Europe::Paris));
+        assert_eq!(zone_in_ics("DTSTART:20261030T090000Z"), None);
+        assert_eq!(zone_in_ics("DTSTART;TZID=Pacific Standard Time:20261030T090000"), None);
+    }
+
+    #[test]
+    fn zone_times_round_trip() {
+        let wall = NaiveDate::from_ymd_opt(2026, 10, 30).unwrap().and_hms_opt(9, 0, 0).unwrap();
+        let tz = Some(chrono_tz::Asia::Tokyo);
+        assert_eq!(to_zone(from_zone(wall, tz), tz), wall);
+        assert_eq!(from_zone(wall, None), wall);
     }
 }

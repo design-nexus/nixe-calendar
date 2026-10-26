@@ -38,6 +38,8 @@ pub struct Prefs {
     pub show_declined: bool,
     /// The view Calendar opens on: `day`, `week`, `month`, `year` or `agenda`.
     pub open_view: String,
+    /// Accounts whose calendars are folded away in the sidebar (by heading).
+    pub collapsed_groups: Vec<String>,
 }
 
 /// Calendars shown together ("Work", "Family").
@@ -69,6 +71,7 @@ impl Default for Prefs {
             new_events_calendar: String::new(),
             show_declined: true,
             open_view: "week".into(),
+            collapsed_groups: Vec::new(),
         }
     }
 }

@@ -74,6 +74,7 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
     card.add_css_class("quick-create");
     let entry = gtk::Entry::new();
     entry.set_placeholder_text(Some("Lunch with Sam tomorrow at 1"));
+    entry.update_property(&[gtk::accessible::Property::Label("Quick add: what and when")]);
     entry.set_width_chars(34);
     card.append(&entry);
     let preview = widgets::label("", "dim");

@@ -18,6 +18,9 @@ pub enum Update {
     Calendars(Vec<CalendarInfo>),
     /// The user's own addresses, for finding them among attendees.
     Identities(Vec<String>),
+    /// Online accounts whose calendars EDS can't load: its backend for them
+    /// isn't installed.
+    Unsupported(Vec<String>),
     Events {
         from: NaiveDate,
         to: NaiveDate,
@@ -280,6 +283,7 @@ fn connect() {
             });
             send_calendars(true);
             send_identities();
+            send_unsupported();
             load_events();
             poll_online();
         }
@@ -320,6 +324,32 @@ fn send_identities() {
     send(Update::Identities(me));
 }
 
+/// Microsoft accounts (GOA `ms_graph`, `exchange`) need evolution-ews's EDS
+/// backends, which plain evolution-data-server doesn't have.
+fn send_unsupported() {
+    let installed = |name: &str| {
+        ["/usr/lib", "/usr/lib64", "/usr/local/lib"]
+            .iter()
+            .any(|dir| std::path::Path::new(&format!("{dir}/evolution-data-server/calendar-backends/{name}")).exists())
+    };
+    let mut missing = Vec::new();
+    STATE.with(|s| {
+        let s = s.borrow();
+        let Some(client) = &s.accounts else { return };
+        for account in client.list().unwrap_or_default() {
+            let backend = match account.provider_type.as_str() {
+                "ms_graph" => "libecalbackendmicrosoft365.so",
+                "exchange" => "libecalbackendews.so",
+                _ => continue,
+            };
+            if !installed(backend) {
+                missing.push(account.label().to_string());
+            }
+        }
+    });
+    send(Update::Unsupported(missing));
+}
+
 /// Re-sends the calendars when one goes online or offline.
 fn poll_online() {
     after(std::time::Duration::from_secs(30), || {
@@ -336,6 +366,7 @@ fn schedule_sources() {
         PENDING_SOURCES.with(|p| p.set(false));
         send_calendars(true);
         send_identities();
+        send_unsupported();
         load_events();
     });
 }

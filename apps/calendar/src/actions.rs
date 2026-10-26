@@ -70,6 +70,42 @@ fn shifted(series: When, old: When, new: When) -> When {
     }
 }
 
+/// Moves an event (its whole series) to another calendar, with Undo.
+pub fn move_to(event: &Event, target: String) {
+    let (from, uid, title) = (event.calendar.clone(), event.uid.clone(), event.title.clone());
+    let name = window::calendars().iter().find(|c| c.uid == target).map(|c| c.name.clone()).unwrap_or_default();
+    let (back_from, back_to, back_uid) = (target.clone(), from.clone(), uid.clone());
+    worker::ask(
+        move || transfer(&from, &target, &uid),
+        move |result| match result {
+            Ok(()) => window::toast_undo(&format!("Moved “{title}” to {name}."), move || {
+                let (from, to, uid) = (back_from.clone(), back_to.clone(), back_uid.clone());
+                worker::ask(
+                    move || transfer(&from, &to, &uid),
+                    |result| {
+                        if let Err(err) = result {
+                            window::toast(&err);
+                        }
+                    },
+                );
+            }),
+            Err(err) => window::toast(&err),
+        },
+    );
+}
+
+/// Copies a series into another calendar, then removes the original (or the
+/// copy again, when the original can't go).
+fn transfer(from: &str, to: &str, uid: &str) -> Result<(), String> {
+    let ics = worker::with_calendar(from, |cal| cal.export(uid))?;
+    worker::with_calendar(to, |cal| cal.import_all(&ics))?;
+    if let Err(err) = worker::with_calendar(from, |cal| cal.remove(uid, None, Scope::All)) {
+        let _ = worker::with_calendar(to, |cal| cal.remove(uid, None, Scope::All));
+        return Err(err);
+    }
+    Ok(())
+}
+
 /// Deletes an event (asking which occurrences for a repeating one), with Undo.
 pub fn delete(event: &Event) {
     let event = event.clone();

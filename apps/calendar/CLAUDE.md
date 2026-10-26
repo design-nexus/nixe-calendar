@@ -47,3 +47,11 @@
 - Control tools (`control.rs`): `calendar.list/read/next/search/free_slots/suggest_times` read;
   `calendar.create/edit/delete` change. Before Assistant uses them, its `nixe-apps`
   ability needs them and its policy must treat the changing ones as edits.
+- Moving an event to another calendar (`actions::move_to`; editor's Calendar choice and the
+  event menu's Move to): exports the series, `import_all` into the target, removes the
+  original (or the copy if that fails), with Undo.
+- Time zones (`editor.rs`): the editor's times are wall-clock in its Time zone choice
+  (chrono-tz names); an event's own zone is read from its DTSTART TZID (`zone_in_ics`) and
+  written through `Draft::zone`. Views show local time.
+- Account groups in the sidebar fold (prefs `collapsed_groups`, by heading). A banner shows
+  for GOA `ms_graph`/`exchange` accounts when evolution-ews's EDS backends are missing.

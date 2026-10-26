@@ -117,6 +117,8 @@ struct Ui {
     /// A year-wide search: the query and what it found.
     results: Option<(String, Vec<Event>)>,
     unavailable: Option<String>,
+    /// Online accounts whose calendars need a backend EDS doesn't have.
+    unsupported: Vec<String>,
     loaded: bool,
     refreshing: bool,
 }
@@ -258,6 +260,11 @@ pub fn apply(update: Update) {
         }
         Update::Identities(me) => {
             ui.borrow_mut().me = me;
+            return;
+        }
+        Update::Unsupported(accounts) => {
+            ui.borrow_mut().unsupported = accounts;
+            rebuild_banners();
             return;
         }
         Update::Events { from, to, events, problems } => {
@@ -590,6 +597,15 @@ fn rebuild_banners() {
     if let Some(text) = &u.unavailable {
         banners.append(&widgets::banner(&glib::markup_escape_text(text), true));
     }
+    for account in &u.unsupported {
+        banners.append(&widgets::banner(
+            &format!(
+                "<b>{}</b>: its calendars need the Microsoft 365 backends for Evolution Data Server (the evolution-ews-backends or evolution-ews package).",
+                glib::markup_escape_text(account)
+            ),
+            true,
+        ));
+    }
     let mut asked = Vec::new();
     for cal in u.calendars.iter().filter(|c| c.needs_sign_in) {
         let group = cal.group_label().to_string();
@@ -688,24 +704,47 @@ fn calendar_button(cal: &CalendarInfo) -> gtk::Button {
     button
 }
 
-fn group_label(text: &str, add: bool) -> gtk::Widget {
+/// An account's heading, which folds its calendars away.
+fn group_label(text: &str, add: bool, folded: bool) -> gtk::Widget {
     let label = widgets::label(&text.to_uppercase(), "nav-group");
-    label.add_css_class("compact-hide");
-    if !add {
-        return label.upcast();
-    }
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     row.add_css_class("compact-hide");
     label.set_hexpand(true);
     label.set_xalign(0.0);
     row.append(&label);
-    let plus = widgets::icon_button("list-add-symbolic", "Add an account");
-    plus.add_css_class("flat");
-    plus.add_css_class("nav-group-add");
-    plus.set_valign(gtk::Align::End);
-    plus.connect_clicked(|_| open_online_accounts());
-    row.append(&plus);
+    if add {
+        let plus = widgets::icon_button("list-add-symbolic", "Add an account");
+        plus.add_css_class("flat");
+        plus.add_css_class("nav-group-add");
+        plus.set_valign(gtk::Align::End);
+        plus.connect_clicked(|_| open_online_accounts());
+        row.append(&plus);
+    }
+    let (icon, tip) = if folded { ("pan-end-symbolic", "Show its calendars") } else { ("pan-down-symbolic", "Hide its calendars") };
+    let fold = widgets::icon_button(icon, tip);
+    fold.add_css_class("flat");
+    fold.add_css_class("nav-group-add");
+    fold.set_valign(gtk::Align::End);
+    let key = text.to_string();
+    fold.connect_clicked(move |_| toggle_group_folded(&key));
+    row.append(&fold);
+    let click = gtk::GestureClick::new();
+    let key = text.to_string();
+    click.connect_released(move |_, _, _, _| toggle_group_folded(&key));
+    label.add_controller(click);
     row.upcast()
+}
+
+/// Folds or unfolds an account's calendars in the sidebar.
+pub(crate) fn toggle_group_folded(key: &str) {
+    prefs::update(|p| {
+        if p.collapsed_groups.iter().any(|g| g == key) {
+            p.collapsed_groups.retain(|g| g != key);
+        } else {
+            p.collapsed_groups.push(key.to_string());
+        }
+    });
+    rebuild_nav();
 }
 
 fn rebuild_nav() {
@@ -766,8 +805,13 @@ fn rebuild_nav() {
             None => groups.push((label, vec![cal])),
         }
     }
+    let folded_groups = prefs::get().collapsed_groups;
     for (i, (label, items)) in groups.iter().enumerate() {
-        list.append(&group_label(label, i == 0));
+        let folded = folded_groups.contains(label);
+        list.append(&group_label(label, i == 0, folded));
+        if folded {
+            continue;
+        }
         for cal in items {
             list.append(&calendar_button(cal));
         }
@@ -881,6 +925,7 @@ fn build(app: &gtk::Application) {
 
     let search = gtk::SearchEntry::new();
     search.set_placeholder_text(Some("Find events — Enter searches the whole year"));
+    search.update_property(&[gtk::accessible::Property::Label("Find events")]);
     search.set_visible(false);
     search.connect_search_changed(|_| {
         if let Some(ui) = ui() {
@@ -984,6 +1029,7 @@ fn build(app: &gtk::Application) {
         me: Vec::new(),
         results: None,
         unavailable: None,
+        unsupported: Vec::new(),
         loaded: false,
         refreshing: false,
     };
@@ -1245,6 +1291,7 @@ fn save_set() {
     card.append(&note);
     let name = gtk::Entry::new();
     name.set_placeholder_text(Some("Work, Family…"));
+    name.update_property(&[gtk::accessible::Property::Label("Set name")]);
     card.append(&name);
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     buttons.set_halign(gtk::Align::End);

@@ -77,6 +77,7 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, event: Event) {
         let join = gtk::Button::from_icon_name("camera-web-symbolic");
         join.add_css_class("suggested-action");
         join.set_tooltip_text(Some("Join the video call (J)"));
+        join.update_property(&[gtk::accessible::Property::Label("Join the video call")]);
         join.set_halign(gtk::Align::Start);
         let (l, p) = (link.clone(), popover.clone());
         join.connect_clicked(move |_| {

@@ -56,6 +56,19 @@ pub fn event(widget: &gtk::Widget, x: f64, y: f64, event: Event) {
                 .collect(),
         ));
     }
+    if !read_only {
+        let targets: Vec<MenuEntry> = calendars
+            .iter()
+            .filter(|c| !c.read_only && c.uid != event.calendar)
+            .map(|c| {
+                let (e, uid) = (event.clone(), c.uid.clone());
+                item(&format!("{} · {}", c.name, c.group_label()), move || actions::move_to(&e, uid.clone()))
+            })
+            .collect();
+        if !targets.is_empty() {
+            out.push(sub("Move to", targets));
+        }
+    }
     out.push(separator());
     let e = event.clone();
     out.push(item("Export as .ics…", move || actions::export(&e)));
