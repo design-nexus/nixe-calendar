@@ -1,6 +1,6 @@
 [package]
 name = "nixe-calendar"
-version = "0.1.0"
+version = "0.1.1"
 description = "A calendar for Omarchy: your online and local calendars in one place"
 license.workspace = true
 repository.workspace = true

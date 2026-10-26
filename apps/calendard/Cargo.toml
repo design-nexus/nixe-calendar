@@ -1,6 +1,6 @@
 [package]
 name = "nixe-calendard"
-version = "0.1.0"
+version = "0.1.1"
 description = "Calendar reminders and the agenda for Glimpse, in the background"
 license.workspace = true
 repository.workspace = true
