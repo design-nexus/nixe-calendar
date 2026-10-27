@@ -1,10 +1,10 @@
 //! End to end on a private session bus with scratch XDG directories (run through
 //! tools/test-calendard.sh): an event with an alert due in 20 seconds goes into
-//! EDS's local calendar, nixe-calendard runs, and this test plays the desktop's
+//! EDS's local calendar, nyx-calendard runs, and this test plays the desktop's
 //! notification server and checks what it is asked to show.
 
 use gio::prelude::*;
-use nixe_eds::{Calendar, Draft, Kind, Registry, Scope, When};
+use nyx_eds::{Calendar, Draft, Kind, Registry, Scope, When};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -34,7 +34,7 @@ fn pump(until: Instant, mut done: impl FnMut() -> bool) -> bool {
 #[test]
 #[ignore]
 fn due_alert_becomes_a_notification_and_the_agenda_is_written() {
-    assert!(std::env::var("NIXE_EDS_SCRATCH").is_ok(), "run through tools/test-calendard.sh");
+    assert!(std::env::var("NYX_EDS_SCRATCH").is_ok(), "run through tools/test-calendard.sh");
     let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).unwrap();
 
     // The fake notification server.
@@ -77,8 +77,8 @@ fn due_alert_becomes_a_notification_and_the_agenda_is_written() {
         })
         .unwrap();
 
-    let mut daemon = std::process::Command::new(env!("CARGO_BIN_EXE_nixe-calendard")).spawn().unwrap();
-    let agenda = std::path::PathBuf::from(std::env::var("XDG_DATA_HOME").unwrap()).join("nixe-calendar/agenda.sqlite");
+    let mut daemon = std::process::Command::new(env!("CARGO_BIN_EXE_nyx-calendard")).spawn().unwrap();
+    let agenda = std::path::PathBuf::from(std::env::var("XDG_DATA_HOME").unwrap()).join("nyx-calendar/agenda.sqlite");
     let notified = pump(Instant::now() + Duration::from_secs(90), || !seen.borrow().is_empty());
     let wrote = pump(Instant::now() + Duration::from_secs(10), || agenda.exists());
     let _ = daemon.kill();

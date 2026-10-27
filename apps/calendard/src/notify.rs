@@ -3,14 +3,14 @@
 
 use chrono::{DateTime, Local};
 use gio::prelude::*;
-use nixe_eds::Reminder;
+use nyx_eds::Reminder;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 const NOTIFICATIONS: &str = "org.freedesktop.Notifications";
 const PATH: &str = "/org/freedesktop/Notifications";
-const ICON: &str = "io.github.design_nexus.nixe.Calendar";
+const ICON: &str = "io.github.design_nexus.nyx.Calendar";
 /// NotificationClosed reason: dismissed by the user.
 const CLOSED_BY_USER: u32 = 2;
 
@@ -42,7 +42,7 @@ impl Notifier {
                         "join" => {
                             let item = &reminder.item;
                             if let Some(link) =
-                                nixe_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description)
+                                nyx_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description)
                             {
                                 let _ = gio::AppInfo::launch_default_for_uri(&link, None::<&gio::AppLaunchContext>);
                             }
@@ -55,7 +55,7 @@ impl Notifier {
                                 .map(|t| t.with_timezone(&Local).format("%Y-%m-%d").to_string())
                                 .unwrap_or_default();
                             let _ =
-                                std::process::Command::new("nixe-calendar").args(["--section", "day", "--date", &day]).spawn();
+                                std::process::Command::new("nyx-calendar").args(["--section", "day", "--date", &day]).spawn();
                             crate::with_reminders(|r| {
                                 let _ = r.dismiss(&reminder);
                             });
@@ -97,7 +97,7 @@ impl Notifier {
         let body = body(&reminder, Local::now().timestamp());
         // A video call gets Join first.
         let item = &reminder.item;
-        let call = nixe_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description).is_some();
+        let call = nyx_calendar_core::plan::meeting_link_in(item.url.as_deref(), &item.location, &item.description).is_some();
         let mut actions: Vec<String> = ["default", "Open"].iter().map(|s| s.to_string()).collect();
         if call {
             actions.extend(["join".to_string(), "Join".to_string()]);
@@ -125,7 +125,7 @@ impl Notifier {
                 Some((id,)) => {
                     shown.borrow_mut().insert(id, reminder);
                 }
-                None => eprintln!("nixe-calendard: couldn't show a notification"),
+                None => eprintln!("nyx-calendard: couldn't show a notification"),
             },
         );
     }

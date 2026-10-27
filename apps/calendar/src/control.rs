@@ -1,4 +1,4 @@
-//! Calendar's tools on the control interface (`nixe_core::control`), for Nixe
+//! Calendar's tools on the control interface (`nyx_core::control`), for Nyx
 //! Assistant: list calendars, read and search events, find free time, and add,
 //! change or delete events. Assistant asks before anything that changes a
 //! calendar; event text is returned as untrusted content.
@@ -6,9 +6,9 @@
 use crate::window;
 use crate::worker;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime};
-use nixe_calendar_core::{Event, Span, whens};
-use nixe_core::control::{Reply, text};
-use nixe_eds::{Draft, Scope};
+use nyx_calendar_core::{Event, Span, whens};
+use nyx_core::control::{Reply, text};
+use nyx_eds::{Draft, Scope};
 use serde_json::{Value, json};
 
 const MAX_EVENTS: usize = 100;
@@ -77,8 +77,8 @@ pub fn handle(name: &str, args: Value, reply: Reply) {
             worker::ask(
                 move || worker::events_between(after.date(), after.date() + Duration::days(21)),
                 move |events| {
-                    let busy = nixe_calendar_core::plan::busy(&events, None);
-                    let times = nixe_calendar_core::plan::suggest(&busy, after, minutes, &hours, count, 21);
+                    let busy = nyx_calendar_core::plan::busy(&events, None);
+                    let times = nyx_calendar_core::plan::suggest(&busy, after, minutes, &hours, count, 21);
                     reply(Ok(
                         json!({ "minutes": minutes, "times": times.iter().map(|t| t.format("%Y-%m-%dT%H:%M").to_string()).collect::<Vec<_>>() }),
                     ));
@@ -253,8 +253,8 @@ fn free_slots(events: &[Event], date: NaiveDate, from_hour: u32, to_hour: u32, m
     } else {
         date.and_hms_opt(to_hour, 0, 0).unwrap_or_default()
     };
-    let busy = nixe_calendar_core::plan::busy(events, None);
-    let free = nixe_calendar_core::plan::free_between(&busy, day_start, day_end, minutes);
+    let busy = nyx_calendar_core::plan::busy(events, None);
+    let free = nyx_calendar_core::plan::free_between(&busy, day_start, day_end, minutes);
     // A day that runs to midnight ends at 23:59 here, so the end is still that day.
     let last = NaiveTime::from_hms_opt(23, 59, 0).unwrap_or(NaiveTime::MIN);
     free.into_iter().map(|(a, b)| (a.time(), if b == day_end && to_hour >= 24 { last } else { b.time() })).collect()

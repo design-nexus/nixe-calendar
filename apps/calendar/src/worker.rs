@@ -4,8 +4,8 @@
 //! data back on the GTK thread.
 
 use chrono::NaiveDate;
-use nixe_calendar_core::{CalendarInfo, Event, Span, midnight};
-use nixe_eds::{Calendar, Kind, Registry, View, Watch, range_query};
+use nyx_calendar_core::{CalendarInfo, Event, Span, midnight};
+use nyx_eds::{Calendar, Kind, Registry, View, Watch, range_query};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
@@ -33,7 +33,7 @@ pub enum Update {
 struct State {
     registry: Option<Registry>,
     _watch: Option<Watch>,
-    accounts: Option<nixe_accounts::Client>,
+    accounts: Option<nyx_accounts::Client>,
     open: HashMap<String, Calendar>,
     /// Task lists opened for the reminders overlay.
     tasks: HashMap<String, Calendar>,
@@ -87,7 +87,7 @@ pub fn ask<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, reply: 
 }
 
 /// Runs `f` with an open calendar (opening it if needed). For use inside [`ask`].
-pub fn with_calendar<T>(uid: &str, f: impl FnOnce(&Calendar) -> Result<T, nixe_eds::Error>) -> Result<T, String> {
+pub fn with_calendar<T>(uid: &str, f: impl FnOnce(&Calendar) -> Result<T, nyx_eds::Error>) -> Result<T, String> {
     STATE.with(|s| {
         let mut s = s.borrow_mut();
         let state = &mut *s;
@@ -111,7 +111,7 @@ pub fn reminders_between(from: NaiveDate, to: NaiveDate) -> (Vec<Event>, Vec<Tas
         let mut s = s.borrow_mut();
         let state = &mut *s;
         let Some(registry) = &state.registry else { return (Vec::new(), Vec::new()) };
-        let lists: Vec<nixe_eds::Source> = registry.sources(Kind::TaskList).into_iter().filter(|l| l.selected).collect();
+        let lists: Vec<nyx_eds::Source> = registry.sources(Kind::TaskList).into_iter().filter(|l| l.selected).collect();
         let query = format!(
             r#"(and (due-in-time-range? (make-time "{}") (make-time "{}")) (not is-completed?))"#,
             stamp(midnight(from)),
@@ -130,11 +130,11 @@ pub fn reminders_between(from: NaiveDate, to: NaiveDate) -> (Vec<Event>, Vec<Tas
             let Ok(items) = state.tasks[&list.uid].items(&query) else { continue };
             for item in items {
                 let span = match item.due {
-                    Some(nixe_eds::When::Date { year, month, day }) => {
+                    Some(nyx_eds::When::Date { year, month, day }) => {
                         let Some(d) = NaiveDate::from_ymd_opt(year, month, day) else { continue };
                         Span::AllDay { first: d, last: d }
                     }
-                    Some(nixe_eds::When::Time(t)) => {
+                    Some(nyx_eds::When::Time(t)) => {
                         let Some(at) =
                             chrono::DateTime::from_timestamp(t, 0).map(|t| t.with_timezone(&chrono::Local).naive_local())
                         else {
@@ -227,7 +227,7 @@ pub fn set_color(uid: String, color: String, reply: impl FnOnce(Result<(), Strin
 }
 
 /// Every calendar, with whether it's switched on (Settings → Calendars).
-pub fn all_calendars(reply: impl FnOnce(Vec<(nixe_eds::Source, bool)>) + 'static) {
+pub fn all_calendars(reply: impl FnOnce(Vec<(nyx_eds::Source, bool)>) + 'static) {
     ask(|| STATE.with(|s| s.borrow().registry.as_ref().map(|r| r.all_sources(Kind::Calendar)).unwrap_or_default()), reply);
 }
 
@@ -271,7 +271,7 @@ fn connect() {
     match Registry::connect() {
         Ok(registry) => {
             let watch = registry.watch(schedule_sources);
-            let accounts = nixe_accounts::Client::connect().ok();
+            let accounts = nyx_accounts::Client::connect().ok();
             if let Some(client) = &accounts {
                 client.watch(schedule_sources);
             }

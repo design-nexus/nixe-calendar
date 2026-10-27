@@ -1,8 +1,8 @@
-id = "nixe-calendar"
+id = "nyx-calendar"
 name = "Calendar"
 version = "0.1.0"
 api_version = 1
-exec = ["./nixe-calendar-glimpse"]
+exec = ["./nyx-calendar-glimpse"]
 capabilities = ["search", "preview"]
 description = "Your agenda from Calendar. Try today, tomorrow, calendar, next meeting, or words from an event."
 

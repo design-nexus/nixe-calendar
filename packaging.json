@@ -2,8 +2,8 @@
   "application": "calendar",
   "directory": "calendar",
   "packages": [
-    "nixe-calendar",
-    "nixe-calendard"
+    "nyx-calendar",
+    "nyx-calendard"
   ],
   "manifest": "Cargo.toml",
   "prepare": [],
@@ -14,11 +14,11 @@
       "test",
       "--locked",
       "-p",
-      "nixe-calendar-core",
+      "nyx-calendar-core",
       "-p",
-      "nixe-calendar",
+      "nyx-calendar",
       "-p",
-      "nixe-calendard"
+      "nyx-calendard"
     ]
   ]
 }

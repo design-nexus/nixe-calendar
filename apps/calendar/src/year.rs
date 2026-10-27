@@ -6,7 +6,7 @@ use crate::prefs;
 use crate::widgets;
 use chrono::{Datelike, Local, NaiveDate};
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, month_weeks};
+use nyx_calendar_core::{Event, month_weeks};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -81,7 +81,7 @@ impl YearView {
             .build();
         let view = Self { root, months, data };
         let v = view.clone();
-        nixe_theme::subscribe(&view.root, move || v.redraw());
+        nyx_theme::subscribe(&view.root, move || v.redraw());
         view
     }
 

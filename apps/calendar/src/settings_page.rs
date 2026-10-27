@@ -151,7 +151,7 @@ fn fill_calendars(list: &gtk::Box) {
         while let Some(child) = list.first_child() {
             list.remove(&child);
         }
-        let mut groups: Vec<(String, Vec<(nixe_eds::Source, bool)>)> = Vec::new();
+        let mut groups: Vec<(String, Vec<(nyx_eds::Source, bool)>)> = Vec::new();
         for (source, on) in all {
             let label = source.group.clone().unwrap_or_else(|| "On this computer".into());
             match groups.iter_mut().find(|(g, _)| *g == label) {

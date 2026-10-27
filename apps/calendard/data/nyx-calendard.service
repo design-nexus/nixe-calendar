@@ -1,10 +1,10 @@
 [Unit]
-Description=Nixe Calendar reminders
+Description=Nyx Calendar reminders
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
-ExecStart=%h/.local/bin/nixe-calendard
+ExecStart=%h/.local/bin/nyx-calendard
 Restart=on-failure
 UMask=0077
 LimitCORE=0

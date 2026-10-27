@@ -3,8 +3,8 @@
 use crate::prefs;
 use chrono::{NaiveDateTime, NaiveTime, Timelike};
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, Span};
-use nixe_theme::Rgb;
+use nyx_calendar_core::{Event, Span};
+use nyx_theme::Rgb;
 use std::collections::HashMap;
 
 /// A calendar's name and color, by uid.
@@ -47,7 +47,7 @@ pub struct Colors {
 }
 
 pub fn colors() -> Colors {
-    let p = nixe_theme::palette();
+    let p = nyx_theme::palette();
     let bg = Rgb::hex(&p.bg);
     Colors {
         bg,

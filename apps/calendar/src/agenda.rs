@@ -4,8 +4,8 @@ use crate::draw::{self, Calendars, Hooks};
 use crate::widgets;
 use chrono::{Local, NaiveDate};
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, Span, agenda};
-use nixe_theme::Rgb;
+use nyx_calendar_core::{Event, Span, agenda};
+use nyx_theme::Rgb;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -80,7 +80,7 @@ impl AgendaView {
         dot.set_content_height(10);
         dot.set_valign(gtk::Align::Center);
         dot.set_draw_func(move |_, cr, _, _| {
-            let c = color.as_deref().map(Rgb::hex).unwrap_or_else(|| Rgb::hex(&nixe_theme::palette().accent));
+            let c = color.as_deref().map(Rgb::hex).unwrap_or_else(|| Rgb::hex(&nyx_theme::palette().accent));
             draw::set(cr, c);
             cr.arc(5.0, 5.0, 4.5, 0.0, std::f64::consts::TAU);
             let _ = cr.fill();

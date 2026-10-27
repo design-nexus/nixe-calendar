@@ -1,7 +1,7 @@
 [package]
-name = "nixe-calendar-core"
+name = "nyx-calendar-core"
 version = "0.1.1"
-description = "Calendar model and layout for Nixe Calendar"
+description = "Calendar model and layout for Nyx Calendar"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -10,4 +10,4 @@ repository.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }
+nyx-eds = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }

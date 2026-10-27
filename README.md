@@ -2,7 +2,7 @@
 
 A calendar for Omarchy: the calendars from your Google, Microsoft 365, Outlook.com,
 Nextcloud and other online accounts, and calendars kept on this computer, in one week view. Part of the
-[Nixe](https://github.com/design-nexus/nixe) apps.
+[Nyx](https://github.com/design-nexus/nyx) apps.
 
 - Day, week, month and agenda views, with a month in the sidebar
 - Type “Lunch with Sam tomorrow at 1” to add an event; a full editor for repeats, alerts, places and notes
@@ -16,13 +16,13 @@ Nextcloud and other online accounts, and calendars kept on this computer, in one
 
 Accounts are added in **Settings → Online Accounts**. Calendar data is kept by
 Evolution Data Server, so it stays on this computer and syncs with your accounts. Microsoft 365
-and Outlook.com calendars need the `evolution-ews` package, or [`evolution-ews-backends`](https://github.com/design-nexus/nixe-core/tree/main/packaging/evolution-ews-backends),
+and Outlook.com calendars need the `evolution-ews` package, or [`evolution-ews-backends`](https://github.com/design-nexus/nyx-core/tree/main/packaging/evolution-ews-backends),
 which is the same without the Evolution app.
 
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/design-nexus/nixe-calendar/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/design-nexus/nyx-calendar/main/install.sh | bash
 ```
 
 ## Keys

@@ -1,25 +1,25 @@
-//! nixe-calendard: Calendar's background service. It turns due alerts from
+//! nyx-calendard: Calendar's background service. It turns due alerts from
 //! Evolution Data Server into desktop notifications (with Snooze and Dismiss)
 //! and keeps `agenda.sqlite` current for Glimpse. No GTK.
 //!
 //! While Evolution's own `evolution-alarm-notify` runs, it doesn't notify, so
 //! alerts aren't shown twice; both use EDS's record of dismissed alerts. Alerts
-//! from task lists are left to Nixe Reminders.
+//! from task lists are left to Nyx Reminders.
 
 mod agenda;
 mod notify;
 
 use chrono::{Duration, Local};
-use nixe_calendar_core::{CalendarInfo, Event, midnight};
-use nixe_eds::{Calendar, Kind, Registry, Reminders, View, Watch, range_query};
+use nyx_calendar_core::{CalendarInfo, Event, midnight};
+use nyx_eds::{Calendar, Kind, Registry, Reminders, View, Watch, range_query};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-const BUS_NAME: &str = "io.github.design_nexus.nixe.CalendarEngine";
+const BUS_NAME: &str = "io.github.design_nexus.nyx.CalendarEngine";
 const SNOOZE_MINUTES: i64 = 10;
 
-const USAGE: &str = "Usage: nixe-calendard [--write-agenda]\n\
+const USAGE: &str = "Usage: nyx-calendard [--write-agenda]\n\
 \n\
   Shows calendar alerts as notifications and keeps agenda.sqlite current.\n\
   --write-agenda   write agenda.sqlite once and exit\n";
@@ -39,7 +39,7 @@ thread_local! {
 }
 
 fn main() {
-    nixe_core::app::init(nixe_core::app::App { slug: "nixe-calendar", name: "Calendar" });
+    nyx_core::app::init(nyx_core::app::App { slug: "nyx-calendar", name: "Calendar" });
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print!("{USAGE}");
@@ -52,13 +52,13 @@ fn main() {
                 match write_agenda() {
                     Ok(n) => println!("{n} events in {}", agenda_path().display()),
                     Err(e) => {
-                        eprintln!("nixe-calendard: {e}");
+                        eprintln!("nyx-calendard: {e}");
                         std::process::exit(1);
                     }
                 }
             }
             Err(e) => {
-                eprintln!("nixe-calendard: {e}");
+                eprintln!("nyx-calendard: {e}");
                 std::process::exit(1);
             }
         }
@@ -74,7 +74,7 @@ fn main() {
         |_, _| {},
         |_, _| start(),
         move |_, _| {
-            eprintln!("nixe-calendard: already running");
+            eprintln!("nyx-calendard: already running");
             quit.quit();
         },
     );
@@ -82,7 +82,7 @@ fn main() {
 }
 
 fn agenda_path() -> std::path::PathBuf {
-    nixe_core::paths::data_dir().join("agenda.sqlite")
+    nyx_core::paths::data_dir().join("agenda.sqlite")
 }
 
 fn start() {
@@ -95,7 +95,7 @@ fn start() {
                 if notify::other_notifier_running() {
                     return;
                 }
-                // Task lists' alerts are Nixe Reminders' to show.
+                // Task lists' alerts are Nyx Reminders' to show.
                 let events_only = |source: &str| {
                     STATE.with(|s| s.borrow().registry.as_ref().is_some_and(|r| r.source(source, Kind::Calendar).is_some()))
                 };
@@ -117,7 +117,7 @@ fn start() {
             });
         }
         Err(err) => {
-            eprintln!("nixe-calendard: {err}; trying again in 30 s");
+            eprintln!("nyx-calendard: {err}; trying again in 30 s");
             glib::timeout_add_seconds_local_once(30, start);
         }
     }
@@ -144,7 +144,7 @@ fn schedule() {
     glib::timeout_add_seconds_local_once(2, || {
         PENDING.with(|p| p.set(false));
         if let Err(e) = write_agenda() {
-            eprintln!("nixe-calendard: agenda: {e}");
+            eprintln!("nyx-calendard: agenda: {e}");
         }
     });
 }
@@ -182,7 +182,7 @@ fn write_agenda() -> Result<usize, String> {
                         state.open.insert(cal.uid.clone(), open);
                     }
                     Err(e) => {
-                        eprintln!("nixe-calendard: {}: {e}", cal.name);
+                        eprintln!("nyx-calendard: {}: {e}", cal.name);
                         continue;
                     }
                 }

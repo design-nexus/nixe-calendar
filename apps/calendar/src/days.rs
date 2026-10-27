@@ -4,7 +4,7 @@
 use crate::draw::{self, Calendars, Hooks, Slot, Style};
 use chrono::{Datelike, Local, NaiveDate, NaiveTime, Timelike};
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, Span, WeekLayout};
+use nyx_calendar_core::{Event, Span, WeekLayout};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -134,7 +134,7 @@ impl DaysView {
 
         let view = Self { root, header, grid, scroll, data };
         let v = view.clone();
-        nixe_theme::subscribe(&view.root, move || v.redraw());
+        nyx_theme::subscribe(&view.root, move || v.redraw());
         let grid = view.grid.downgrade();
         glib::timeout_add_seconds_local(60, move || match grid.upgrade() {
             Some(g) => {

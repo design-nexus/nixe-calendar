@@ -1,5 +1,5 @@
 [package]
-name = "nixe-calendard"
+name = "nyx-calendard"
 version = "0.1.1"
 description = "Calendar reminders and the agenda for Glimpse, in the background"
 license.workspace = true
@@ -8,19 +8,19 @@ authors.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "nixe-calendard"
+name = "nyx-calendard"
 path = "src/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 gio = "0.22"
 glib = "0.22"
-nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
-nixe-core = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c", default-features = false }
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }
+nyx-calendar-core = { path = "../../crates/nyx-calendar-core" }
+nyx-core = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c", default-features = false }
+nyx-eds = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 
 [dev-dependencies]
 gio = "0.22"
 glib = "0.22"
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }
+nyx-eds = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }

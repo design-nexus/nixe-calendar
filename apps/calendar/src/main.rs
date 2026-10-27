@@ -23,9 +23,9 @@ mod year;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 
-pub const APP_ID: &str = "io.github.design_nexus.nixe.Calendar";
+pub const APP_ID: &str = "io.github.design_nexus.nyx.Calendar";
 
-const USAGE: &str = "Usage: nixe-calendar [OPTIONS] [FILE.ics...]\n\
+const USAGE: &str = "Usage: nyx-calendar [OPTIONS] [FILE.ics...]\n\
 \n\
   FILE.ics        import the events in an iCalendar file\n\
   --section ID    open day, week, month, year, agenda or settings\n\
@@ -39,10 +39,10 @@ fn start_reminders() {
     if std::env::var_os("CALENDAR_SNAPSHOT").is_some() {
         return;
     }
-    let unit = nixe_core::paths::config_home().join("systemd/user/nixe-calendard.service");
+    let unit = nyx_core::paths::config_home().join("systemd/user/nyx-calendard.service");
     if unit.exists() {
         let _ = std::process::Command::new("systemctl")
-            .args(["--user", "start", "--no-block", "nixe-calendard.service"])
+            .args(["--user", "start", "--no-block", "nyx-calendard.service"])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn();
@@ -50,13 +50,13 @@ fn start_reminders() {
 }
 
 fn main() -> glib::ExitCode {
-    nixe_core::app::init(nixe_core::app::App { slug: "nixe-calendar", name: "Calendar" });
+    nyx_core::app::init(nyx_core::app::App { slug: "nyx-calendar", name: "Calendar" });
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print!("{USAGE}");
         return glib::ExitCode::SUCCESS;
     }
-    // The control tools as JSON, without a window (Nixe Assistant's abilities).
+    // The control tools as JSON, without a window (Nyx Assistant's abilities).
     if args.iter().any(|a| a == "--describe") {
         println!("{}", control::tools());
         return glib::ExitCode::SUCCESS;
@@ -69,7 +69,7 @@ fn main() -> glib::ExitCode {
     let app = gtk::Application::builder().application_id(APP_ID).flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE).build();
     app.connect_startup(|app| {
         theme::install();
-        nixe_core::control::serve_async(app, control::tools(), control::handle);
+        nyx_core::control::serve_async(app, control::tools(), control::handle);
         start_reminders();
     });
     app.connect_command_line(|app, cl| {

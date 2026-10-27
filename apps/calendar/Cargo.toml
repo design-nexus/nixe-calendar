@@ -1,5 +1,5 @@
 [package]
-name = "nixe-calendar"
+name = "nyx-calendar"
 version = "0.1.1"
 description = "A calendar for Omarchy: your online and local calendars in one place"
 license.workspace = true
@@ -8,7 +8,7 @@ authors.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "nixe-calendar"
+name = "nyx-calendar"
 path = "src/main.rs"
 
 [dependencies]
@@ -17,13 +17,13 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 chrono-tz = "0.10"
 glib = "0.22"
 gtk = { version = "0.11", package = "gtk4", features = ["v4_18"] }
-nixe-accounts = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
-nixe-calendar-core = { path = "../../crates/nixe-calendar-core" }
-nixe-core = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
-nixe-eds = { git = "https://github.com/design-nexus/nixe-core.git", rev = "b429e4e49214449175f9d04b231a727695895ca2" }
-nixe-when = { git = "https://github.com/design-nexus/nixe-core.git", rev = "87682e6c936b6a4f006639b1a1c099e96346c07c" }
-nixe-theme = { git = "https://github.com/design-nexus/nixe-design.git", rev = "b8204de80644e263e32783602f2e0ae393578c9e" }
+nyx-accounts = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }
+nyx-calendar-core = { path = "../../crates/nyx-calendar-core" }
+nyx-core = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }
+nyx-eds = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }
+nyx-when = { git = "https://github.com/design-nexus/nyx-core.git", rev = "52cba5e27a3dd5f00c780f53e423302b4b5f9c9c" }
+nyx-theme = { git = "https://github.com/design-nexus/nyx-design.git", rev = "938c638951a53f5874a8276d07ac9dcd68b191ad" }
 pangocairo = "0.22"
-nixe-ui = { git = "https://github.com/design-nexus/nixe-design.git", rev = "b8204de80644e263e32783602f2e0ae393578c9e" }
+nyx-ui = { git = "https://github.com/design-nexus/nyx-design.git", rev = "938c638951a53f5874a8276d07ac9dcd68b191ad" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

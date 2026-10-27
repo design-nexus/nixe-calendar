@@ -1,5 +1,5 @@
 //! Glimpse plugin for Calendar. It reads `agenda.sqlite` (written by
-//! nixe-calendard; Glimpse mounts it read-only into the sandbox) and never
+//! nyx-calendard; Glimpse mounts it read-only into the sandbox) and never
 //! reaches the calendars themselves.
 //!
 //! `today`, `tomorrow`, `calendar` (the next 7 days) and `next meeting` list
@@ -27,13 +27,13 @@ fn main() {
 }
 
 fn database() -> PathBuf {
-    if let Some(path) = std::env::var_os("NIXE_CALENDAR_DB") {
+    if let Some(path) = std::env::var_os("NYX_CALENDAR_DB") {
         return PathBuf::from(path);
     }
     let data = std::env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")));
-    data.unwrap_or_else(|| PathBuf::from(".local/share")).join("nixe-calendar/agenda.sqlite")
+    data.unwrap_or_else(|| PathBuf::from(".local/share")).join("nyx-calendar/agenda.sqlite")
 }
 
 fn open() -> Result<Connection> {

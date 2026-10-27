@@ -7,8 +7,8 @@ use crate::window;
 use crate::worker;
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use gtk::prelude::*;
-use nixe_calendar_core::{Ends, Event, Repeat, Span, whens};
-use nixe_eds::Draft;
+use nyx_calendar_core::{Ends, Event, Repeat, Span, whens};
+use nyx_eds::Draft;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -88,7 +88,7 @@ fn parse_time(text: &str) -> Option<NaiveTime> {
     if t.is_empty() {
         return None;
     }
-    nixe_when::parse(&format!("at {t}"), Local::now().naive_local()).start
+    nyx_when::parse(&format!("at {t}"), Local::now().naive_local()).start
 }
 
 fn time_entry(time: NaiveTime) -> gtk::Entry {
@@ -242,7 +242,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
     // The times above are as the clock reads in this zone: this computer's, or
     // the event's own (read from it below), or one the user picks.
     let zone: Zone = Rc::new(Cell::new(None));
-    let local_zone = nixe_eds::local_zone();
+    let local_zone = nyx_eds::local_zone();
     let zone_names: Vec<&str> = chrono_tz::TZ_VARIANTS.iter().map(|z| z.name()).collect();
     let zone_choice = gtk::DropDown::new(
         Some(gtk::StringList::new(&zone_names)),
@@ -344,7 +344,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                         return;
                     }
                     let skip = ignore.as_ref().map(|(u, r)| (u.as_str(), r.as_deref()));
-                    let hits = nixe_calendar_core::plan::clashes(&events, s, e, skip);
+                    let hits = nyx_calendar_core::plan::clashes(&events, s, e, skip);
                     let names: Vec<String> = hits.iter().take(3).map(|e| format!("“{}”", e.title)).collect();
                     clash.set_visible(!hits.is_empty());
                     clash.set_text(&match hits.len() {
@@ -423,14 +423,14 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                     let theirs = if wanted.is_empty() {
                         Ok(Vec::new())
                     } else {
-                        let stamp = |t: NaiveDateTime| nixe_calendar_core::timestamp(t);
+                        let stamp = |t: NaiveDateTime| nyx_calendar_core::timestamp(t);
                         worker::with_calendar(&server, |c| c.free_busy(stamp(after), stamp(until), &wanted))
                     };
                     (events, theirs, wanted)
                 },
                 move |(events, theirs, wanted)| {
                     let skip = ignore.as_ref().map(|(u, r)| (u.as_str(), r.as_deref()));
-                    let mut busy = nixe_calendar_core::plan::busy(&events, skip);
+                    let mut busy = nyx_calendar_core::plan::busy(&events, skip);
                     match theirs {
                         Ok(found) => {
                             let local = |secs: i64| {
@@ -459,7 +459,7 @@ pub fn open(event: Option<&Event>, start: Option<Start>) {
                         }
                     }
                     busy.sort();
-                    let times = nixe_calendar_core::plan::suggest(&busy, after, minutes, &hours, 8, 14);
+                    let times = nyx_calendar_core::plan::suggest(&busy, after, minutes, &hours, 8, 14);
                     if times.is_empty() {
                         list.append(&widgets::label("Nothing free in working hours in the next two weeks.", "dim"));
                     }

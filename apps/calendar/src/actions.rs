@@ -5,8 +5,8 @@ use crate::widgets;
 use crate::window;
 use crate::worker;
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, Response, When, whens};
-use nixe_eds::{Draft, Scope};
+use nyx_calendar_core::{Event, Response, When, whens};
+use nyx_eds::{Draft, Scope};
 
 /// Adds an event to a calendar.
 pub fn create(calendar: String, draft: Draft, after: impl FnOnce(Result<String, String>) + 'static) {
@@ -62,7 +62,7 @@ fn shifted(series: When, old: When, new: When) -> When {
                 When::Time(_) => None,
             };
             match (date(series), date(old), date(new)) {
-                (Some(s), Some(o), Some(n)) => nixe_calendar_core::date_when(s + (n - o)),
+                (Some(s), Some(o), Some(n)) => nyx_calendar_core::date_when(s + (n - o)),
                 _ => new,
             }
         }

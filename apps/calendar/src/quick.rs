@@ -8,9 +8,9 @@ use crate::widgets;
 use crate::window;
 use chrono::{Duration, Local, NaiveTime};
 use gtk::prelude::*;
-use nixe_calendar_core::{Repeat, Span, whens};
-use nixe_eds::Draft;
-use nixe_when::Parse;
+use nyx_calendar_core::{Repeat, Span, whens};
+use nyx_eds::Draft;
+use nyx_when::Parse;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -111,7 +111,7 @@ pub fn show(parent: &gtk::Widget, rect: gtk::gdk::Rectangle, slot: Option<Slot>)
                 Some(Slot::Day(day)) => day.and_time(NaiveTime::MIN),
                 None => Local::now().naive_local(),
             };
-            let parse = nixe_when::parse(text, now);
+            let parse = nyx_when::parse(text, now);
             let main = plan(text, &parse, slot, crate::editor::new_length());
             preview.set_text(&if text.trim().is_empty() {
                 String::new()
@@ -218,20 +218,20 @@ mod tests {
     #[test]
     fn slot_fills_in_what_the_text_leaves_out() {
         let slot = Some(Slot::At(at(22, 14)));
-        let p = nixe_when::parse("Review", at(22, 14));
+        let p = nyx_when::parse("Review", at(22, 14));
         assert_eq!(plan("Review", &p, slot, Duration::hours(1)).span, Span::Timed { start: at(22, 14), end: at(22, 15) });
-        let p = nixe_when::parse("Lunch at 1pm for 90 min", at(22, 9));
+        let p = nyx_when::parse("Lunch at 1pm for 90 min", at(22, 9));
         let got = plan("Lunch at 1pm for 90 min", &p, Some(Slot::At(at(22, 9))), Duration::hours(1));
         assert_eq!(got.title, "Lunch");
         assert_eq!(got.span, Span::Timed { start: at(22, 13), end: at(22, 13) + Duration::minutes(90) });
         let day = NaiveDate::from_ymd_opt(2026, 10, 24).unwrap();
-        let p = nixe_when::parse("Hike", day.and_time(NaiveTime::MIN));
+        let p = nyx_when::parse("Hike", day.and_time(NaiveTime::MIN));
         assert_eq!(plan("Hike", &p, Some(Slot::Day(day)), Duration::hours(1)).span, Span::AllDay { first: day, last: day });
     }
 
     #[test]
     fn repeats_carry_through() {
-        let p = nixe_when::parse("Standup every weekday at 9:30", at(21, 10));
+        let p = nyx_when::parse("Standup every weekday at 9:30", at(21, 10));
         let got = plan("Standup every weekday at 9:30", &p, None, Duration::hours(1));
         assert_eq!(got.title, "Standup");
         assert_eq!(got.repeat.as_deref(), Some("FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"));

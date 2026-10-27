@@ -1,12 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["apps/calendar", "apps/calendar-glimpse", "apps/calendard", "crates/nixe-calendar-core"]
+members = ["apps/calendar", "apps/calendar-glimpse", "apps/calendard", "crates/nyx-calendar-core"]
 
 [workspace.package]
 edition = "2024"
 license = "MIT"
 authors = ["Ken Smith"]
-repository = "https://github.com/design-nexus/nixe-calendar"
+repository = "https://github.com/design-nexus/nyx-calendar"
 
 [profile.release]
 lto = "thin"

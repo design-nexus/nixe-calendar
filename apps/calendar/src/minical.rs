@@ -5,7 +5,7 @@ use crate::prefs;
 use crate::widgets;
 use chrono::{Datelike, Local, Months, NaiveDate};
 use gtk::prelude::*;
-use nixe_calendar_core::month_weeks;
+use nyx_calendar_core::month_weeks;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -71,7 +71,7 @@ impl MiniCalendar {
             button.connect_clicked(move |_| v.shift(months));
         }
         let v = view.clone();
-        nixe_theme::subscribe(&view.root, move || v.area.queue_draw());
+        nyx_theme::subscribe(&view.root, move || v.area.queue_draw());
         view.update_title();
         view
     }

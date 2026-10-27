@@ -3,7 +3,7 @@
 use crate::draw::{self, Calendars, Hooks, Slot, Style};
 use chrono::{Datelike, Local, NaiveDate};
 use gtk::prelude::*;
-use nixe_calendar_core::{Event, MonthLayout, Span};
+use nyx_calendar_core::{Event, MonthLayout, Span};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -98,7 +98,7 @@ impl MonthView {
 
         let view = Self { root, data };
         let v = view.clone();
-        nixe_theme::subscribe(&view.root, move || v.root.queue_draw());
+        nyx_theme::subscribe(&view.root, move || v.root.queue_draw());
         view
     }
 

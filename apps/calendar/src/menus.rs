@@ -7,8 +7,8 @@ use crate::editor::{self, Start};
 use crate::widgets::{self, MenuEntry, danger, item, keyed, separator, sub};
 use crate::{actions, details, prefs, quick, window, worker};
 use chrono::Local;
-use nixe_calendar_core::{CalendarInfo, Event};
-use nixe_eds::Response;
+use nyx_calendar_core::{CalendarInfo, Event};
+use nyx_eds::Response;
 
 fn point(x: f64, y: f64) -> gtk::gdk::Rectangle {
     gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)
@@ -37,10 +37,10 @@ pub fn event(widget: &gtk::Widget, x: f64, y: f64, event: Event) {
             editor::open(None, Some(start));
         }));
     }
-    if let Some(link) = nixe_calendar_core::plan::meeting_link(&event) {
+    if let Some(link) = nyx_calendar_core::plan::meeting_link(&event) {
         out.push(keyed("Join the video call", "J", move || window::open_link(&link)));
     }
-    if let Some(link) = nixe_calendar_core::plan::map_link(&event.location) {
+    if let Some(link) = nyx_calendar_core::plan::map_link(&event.location) {
         out.push(item("Show on a map", move || window::open_link(&link)));
     }
     if !read_only && event.invitation(&window::me()).is_some() {

@@ -1,6 +1,6 @@
-//! Calendar model and layout for Nixe Calendar. No GTK.
+//! Calendar model and layout for Nyx Calendar. No GTK.
 //!
-//! Events come from Evolution Data Server through `nixe-eds`; this crate turns
+//! Events come from Evolution Data Server through `nyx-eds`; this crate turns
 //! them into local wall-clock spans and lays a week out for drawing.
 
 mod month;
@@ -9,12 +9,12 @@ mod repeat;
 mod week;
 
 pub use month::{Agenda, MonthLayout, agenda, month_weeks};
-pub use nixe_eds::{Attendee, Response, When};
+pub use nyx_eds::{Attendee, Response, When};
 pub use repeat::{Ends, Frequency, Repeat};
 pub use week::{AllDayBar, Placed, WeekLayout, week_days, week_start};
 
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
-use nixe_eds::Item;
+use nyx_eds::Item;
 
 /// A calendar in the sidebar.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,7 +74,7 @@ pub struct Event {
     pub url: Option<String>,
     /// The series' RRULE, for the editor.
     pub rule: Option<String>,
-    /// Minutes before the start (see `nixe_eds::Item::alarms`).
+    /// Minutes before the start (see `nyx_eds::Item::alarms`).
     pub alarms: Vec<i64>,
     pub organizer: Option<Attendee>,
     pub attendees: Vec<Attendee>,
@@ -111,7 +111,7 @@ impl Event {
             location: item.location.clone(),
             span,
             repeats: item.repeats,
-            cancelled: item.status == nixe_eds::Status::Cancelled,
+            cancelled: item.status == nyx_eds::Status::Cancelled,
             description: item.description.clone(),
             url: item.url.clone(),
             rule: item.rule.clone(),
@@ -221,7 +221,7 @@ mod tests {
 
     fn item(start: When, end: Option<When>) -> Item {
         Item {
-            kind: nixe_eds::ItemKind::Event,
+            kind: nyx_eds::ItemKind::Event,
             uid: "u".into(),
             rid: None,
             summary: "Dentist".into(),
@@ -230,7 +230,7 @@ mod tests {
             start: Some(start),
             end,
             due: None,
-            status: nixe_eds::Status::None,
+            status: nyx_eds::Status::None,
             completed: None,
             priority: None,
             url: None,

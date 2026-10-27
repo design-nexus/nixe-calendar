@@ -17,9 +17,9 @@ use chrono::{Datelike, Duration, Local, Months, NaiveDate};
 use gtk::gdk;
 use gtk::glib;
 use gtk::prelude::*;
-use nixe_calendar_core::{CalendarInfo, Event, month_weeks, week_days, week_start};
-use nixe_theme::Rgb;
-use nixe_ui::chrome;
+use nyx_calendar_core::{CalendarInfo, Event, month_weeks, week_days, week_start};
+use nyx_theme::Rgb;
+use nyx_ui::chrome;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -296,7 +296,7 @@ fn filtered(events: &[Event], query: &str) -> Vec<Event> {
     let (declined, me) = (prefs::get().show_declined, me());
     events
         .iter()
-        .filter(|e| declined || e.invitation(&me).is_none_or(|a| a.response != nixe_eds::Response::Declined))
+        .filter(|e| declined || e.invitation(&me).is_none_or(|a| a.response != nyx_eds::Response::Declined))
         .filter(|e| {
             q.is_empty()
                 || e.title.to_lowercase().contains(&q)
@@ -569,11 +569,11 @@ fn refresh_status() {
 }
 
 pub fn open_online_accounts() {
-    let settings = nixe_accounts::find_bin("nixe-settings");
+    let settings = nyx_accounts::find_bin("nyx-settings");
     let started =
         settings.is_some_and(|bin| std::process::Command::new(bin).args(["--section", "online-accounts"]).spawn().is_ok());
-    if !started && nixe_accounts::open_management().is_err() {
-        toast("Install Nixe Settings or gnome-online-accounts-gtk to add accounts.");
+    if !started && nyx_accounts::open_management().is_err() {
+        toast("Install Nyx Settings or gnome-online-accounts-gtk to add accounts.");
     }
 }
 
@@ -651,7 +651,7 @@ fn swatch(color: Option<&str>, shown: bool) -> gtk::DrawingArea {
     area.set_valign(gtk::Align::Center);
     let color = color.map(Rgb::hex);
     area.set_draw_func(move |_, cr, w, h| {
-        let c = color.unwrap_or_else(|| Rgb::hex(&nixe_theme::palette().accent));
+        let c = color.unwrap_or_else(|| Rgb::hex(&nyx_theme::palette().accent));
         cr.set_source_rgb(c.0, c.1, c.2);
         let (x, y, s) = (w as f64 / 2.0 - 6.0, h as f64 / 2.0 - 6.0, 12.0);
         if shown {
@@ -895,10 +895,10 @@ fn build(app: &gtk::Application) {
         gtk::ApplicationWindow::builder().application(app).title("Calendar").default_width(1120).default_height(800).build();
     window.add_css_class("calendar-window");
     window.set_titlebar(Some(&gtk::Box::new(gtk::Orientation::Horizontal, 0)));
-    window.set_icon_name(Some("io.github.design_nexus.nixe.Calendar"));
-    nixe_ui::keys::install(
+    window.set_icon_name(Some("io.github.design_nexus.nyx.Calendar"));
+    nyx_ui::keys::install(
         &window,
-        nixe_ui::keys::Common {
+        nyx_ui::keys::Common {
             settings: Some(settings_dialog::open),
             shortcuts: Some(show_shortcuts),
             close: true,
@@ -1224,7 +1224,7 @@ pub fn toast_undo(message: &str, undo: impl Fn() + 'static) {
 
 fn show_toast(message: &str, undo: Option<Box<dyn Fn()>>) {
     let Some(ui) = ui() else {
-        eprintln!("nixe-calendar: {message}");
+        eprintln!("nyx-calendar: {message}");
         return;
     };
     let overlay = ui.borrow().overlay.clone();

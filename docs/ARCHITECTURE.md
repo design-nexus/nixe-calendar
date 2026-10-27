@@ -2,11 +2,11 @@
 
 ```mermaid
 flowchart LR
-  UI[nixe-calendar] --> Eds[nixe-eds]
-  Cald[nixe-calendard] --> Eds
+  UI[nyx-calendar] --> Eds[nyx-eds]
+  Cald[nyx-calendard] --> Eds
   Eds --> Reg[evolution-source-registry]
   Eds --> Factory[EDS calendar factory]
-  UI --> When[nixe-when]
+  UI --> When[nyx-when]
   UI -->|Control| Assistant
   Cald --> Agenda[(agenda.sqlite)]
   Glimpse[calendar-glimpse] -.read only.-> Agenda
@@ -15,7 +15,7 @@ flowchart LR
 
 ## Sources
 
-`nixe-eds::Registry` lists calendar sources with their GOA account, color, visibility
+`nyx-eds::Registry` lists calendar sources with their GOA account, color, visibility
 and read-only flag. Color and visibility changes are written through `ESource` APIs, not
 by editing files. "On this computer" is EDS's local calendar.
 
@@ -39,14 +39,14 @@ by editing files. "On this computer" is EDS's local calendar.
 
 Event data is never copied here.
 
-## `nixe-calendard`
+## `nyx-calendard`
 
 A GTK-free user service. It runs `EReminderWatcher`, sends notifications (one per alarm,
 with Snooze and Dismiss), and rewrites `agenda.sqlite` (±60 days, title, time, calendar,
 location, meeting link) when calendars change. If `evolution-alarm-notify` is running it
 does not notify, to avoid duplicates.
 
-D-Bus `io.github.design_nexus.nixe.CalendarEngine1`: `Agenda(from, to)`,
+D-Bus `io.github.design_nexus.nyx.CalendarEngine1`: `Agenda(from, to)`,
 `FreeBusy(from, to, sources)`, `QuickCreate(text) → preview`.
 
 ## Control tools

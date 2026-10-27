@@ -1,21 +1,21 @@
 # Calendar plan
 
-Nixe Calendar: day, week, month, year and agenda views over the calendars in Evolution
+Nyx Calendar: day, week, month, year and agenda views over the calendars in Evolution
 Data Server, for every account connected in Settings → Online Accounts and for calendars
-kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.com/design-nexus/nixe-core/blob/main/docs/pim/ARCHITECTURE.md).
+kept on this computer. Shared foundation: [nyx-core docs/pim](https://github.com/design-nexus/nyx-core/blob/main/docs/pim/ARCHITECTURE.md).
 
 | | |
 | --- | --- |
-| Packages | `nixe-calendar` (UI), `nixe-calendard` (reminders, agenda index), `nixe-calendar-glimpse` |
-| App id | `io.github.design_nexus.nixe.Calendar` |
-| Data | EDS (events); `~/.local/share/nixe-calendar/calendar.sqlite` (sets, working hours), `agenda.sqlite` (read-only snapshot for Glimpse) |
-| Config | `~/.config/nixe-calendar/settings.toml` |
+| Packages | `nyx-calendar` (UI), `nyx-calendard` (reminders, agenda index), `nyx-calendar-glimpse` |
+| App id | `io.github.design_nexus.nyx.Calendar` |
+| Data | EDS (events); `~/.local/share/nyx-calendar/calendar.sqlite` (sets, working hours), `agenda.sqlite` (read-only snapshot for Glimpse) |
+| Config | `~/.config/nyx-calendar/settings.toml` |
 | MIME | `text/calendar`, `x-scheme-handler/webcal` |
 
 ## Phases
 
 ### 1. Vertical slice (done)
-- [x] Sidebar (Music construction): calendars from `nixe-eds`, grouped by account, with color and visibility
+- [x] Sidebar (Music construction): calendars from `nyx-eds`, grouped by account, with color and visibility
 - [x] Week view built from `ECalClient` instances
 - [x] Status bar: sync state, offline readout, gear
 - [x] Banners: EDS missing or not answering, account needs sign-in, offline
@@ -27,7 +27,7 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 - [x] Create (quick create with natural language, and a full editor); all-day; edit
 - [x] Repeat presets and endings; edit this / this and following / all
 - [x] Invitations: organizer, guests and answers; Going / Maybe / Not going
-- [x] `nixe-calendard`: reminders through `EReminderWatcher`, notifications with Snooze and Dismiss, `agenda.sqlite`; quiet while `evolution-alarm-notify` runs
+- [x] `nyx-calendard`: reminders through `EReminderWatcher`, notifications with Snooze and Dismiss, `agenda.sqlite`; quiet while `evolution-alarm-notify` runs
 - [x] Search (this view as you type; Enter searches a year either side)
 - [x] `.ics` import (file picker, command line, Open with) and export
 - [x] Control tools for Assistant
@@ -36,12 +36,12 @@ kept on this computer. Shared foundation: [nixe-core docs/pim](https://github.co
 
 ### 3. Advanced
 - [x] Year view (twelve months, days with events marked; Y)
-- [x] Natural-language quick create (`nixe-when`), other readings offered before saving (done with the MVP)
+- [x] Natural-language quick create (`nyx-when`), other readings offered before saving (done with the MVP)
 - [x] Calendar Sets: named groups of calendars in the sidebar (shown through EDS visibility)
 - [x] Scheduling assistant: working hours, Find a time in the editor, `calendar.suggest_times` (own calendars; others' free/busy later)
 - [x] Smart scheduling: the editor names clashes and suggests free times; nothing moves without the user
 - [x] Meeting links (Meet, Zoom, Teams, Jitsi, Whereby, Webex): Join in the popover (J) and on alerts
-- [x] Locations: open on OpenStreetMap (until Nixe Maps exists)
+- [x] Locations: open on OpenStreetMap (until Nyx Maps exists)
 - [x] Optional reminders overlay from EDS task lists (Settings → Working hours)
 - [x] Microsoft 365 and Outlook.com through `evolution-ews` (needs the package; "this and following" is hidden where the backend can't do it)
 

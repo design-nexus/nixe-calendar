@@ -3,7 +3,7 @@
 ## Unit
 
 - Week, month and agenda layout: overlapping events, all-day spans, events crossing midnight.
-- `nixe-when` phrases used by quick create (table tests live in nixe-core).
+- `nyx-when` phrases used by quick create (table tests live in nyx-core).
 - Scheduling: free slots against working hours and busy ranges.
 
 ## EDS (private session)

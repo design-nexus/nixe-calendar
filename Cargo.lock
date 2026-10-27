@@ -346,7 +346,7 @@ dependencies = [
 [[package]]
 name = "glimpse-plugin-sdk"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-glimpse.git?rev=e60055b3b10793646b07bcb8b403ef1c67cdfd01#e60055b3b10793646b07bcb8b403ef1c67cdfd01"
+source = "git+https://github.com/design-nexus/nyx-glimpse.git?rev=6f9f7325259bb05c2bc6a5eb1920ce6caed7aa82#6f9f7325259bb05c2bc6a5eb1920ce6caed7aa82"
 dependencies = [
  "anyhow",
  "serde",
@@ -591,9 +591,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-accounts"
+name = "num-traits"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
+name = "nyx-accounts"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "anyhow",
  "gio",
@@ -603,7 +612,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-calendar"
+name = "nyx-calendar"
 version = "0.1.1"
 dependencies = [
  "anyhow",
@@ -611,29 +620,29 @@ dependencies = [
  "chrono-tz",
  "glib",
  "gtk4",
- "nixe-accounts",
- "nixe-calendar-core",
- "nixe-core",
- "nixe-eds",
- "nixe-theme",
- "nixe-ui",
- "nixe-when",
+ "nyx-accounts",
+ "nyx-calendar-core",
+ "nyx-core",
+ "nyx-eds",
+ "nyx-theme",
+ "nyx-ui",
+ "nyx-when",
  "pangocairo",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "nixe-calendar-core"
+name = "nyx-calendar-core"
 version = "0.1.1"
 dependencies = [
  "chrono",
- "nixe-eds",
+ "nyx-eds",
  "serde",
 ]
 
 [[package]]
-name = "nixe-calendar-glimpse"
+name = "nyx-calendar-glimpse"
 version = "0.1.1"
 dependencies = [
  "anyhow",
@@ -643,27 +652,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-calendard"
+name = "nyx-calendard"
 version = "0.1.1"
 dependencies = [
  "chrono",
  "gio",
  "glib",
- "nixe-calendar-core",
- "nixe-core",
- "nixe-eds",
+ "nyx-calendar-core",
+ "nyx-core",
+ "nyx-eds",
  "rusqlite",
 ]
 
 [[package]]
-name = "nixe-camel-sys"
+name = "nyx-camel-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 
 [[package]]
-name = "nixe-core"
+name = "nyx-core"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -673,55 +682,55 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-ecal-sys"
+name = "nyx-ecal-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "gio-sys",
  "glib-sys",
  "gobject-sys",
  "libc",
- "nixe-camel-sys",
- "nixe-edataserver-sys",
- "nixe-icalglib-sys",
+ "nyx-camel-sys",
+ "nyx-edataserver-sys",
+ "nyx-icalglib-sys",
  "system-deps 9.0.0",
 ]
 
 [[package]]
-name = "nixe-edataserver-sys"
+name = "nyx-edataserver-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "gio-sys",
  "glib-sys",
  "gobject-sys",
  "libc",
- "nixe-camel-sys",
- "nixe-json-glib-sys",
- "nixe-libxml2-sys",
+ "nyx-camel-sys",
+ "nyx-json-glib-sys",
+ "nyx-libxml2-sys",
  "soup3-sys",
  "system-deps 9.0.0",
 ]
 
 [[package]]
-name = "nixe-eds"
+name = "nyx-eds"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "gio-sys",
  "glib",
  "glib-sys",
  "gobject-sys",
  "libc",
- "nixe-ecal-sys",
- "nixe-edataserver-sys",
- "nixe-icalglib-sys",
+ "nyx-ecal-sys",
+ "nyx-edataserver-sys",
+ "nyx-icalglib-sys",
 ]
 
 [[package]]
-name = "nixe-icalglib-sys"
+name = "nyx-icalglib-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -731,9 +740,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-json-glib-sys"
+name = "nyx-json-glib-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -743,46 +752,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "nixe-libxml2-sys"
+name = "nyx-libxml2-sys"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=b429e4e49214449175f9d04b231a727695895ca2#b429e4e49214449175f9d04b231a727695895ca2"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 
 [[package]]
-name = "nixe-theme"
+name = "nyx-theme"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-design.git?rev=b8204de80644e263e32783602f2e0ae393578c9e#b8204de80644e263e32783602f2e0ae393578c9e"
+source = "git+https://github.com/design-nexus/nyx-design.git?rev=938c638951a53f5874a8276d07ac9dcd68b191ad#938c638951a53f5874a8276d07ac9dcd68b191ad"
 dependencies = [
  "gtk4",
- "nixe-core",
+ "nyx-core",
  "serde",
  "toml",
 ]
 
 [[package]]
-name = "nixe-ui"
+name = "nyx-ui"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-design.git?rev=b8204de80644e263e32783602f2e0ae393578c9e#b8204de80644e263e32783602f2e0ae393578c9e"
+source = "git+https://github.com/design-nexus/nyx-design.git?rev=938c638951a53f5874a8276d07ac9dcd68b191ad#938c638951a53f5874a8276d07ac9dcd68b191ad"
 dependencies = [
  "gtk4",
- "nixe-core",
- "nixe-theme",
+ "nyx-core",
+ "nyx-theme",
 ]
 
 [[package]]
-name = "nixe-when"
+name = "nyx-when"
 version = "0.1.0"
-source = "git+https://github.com/design-nexus/nixe-core.git?rev=87682e6c936b6a4f006639b1a1c099e96346c07c#87682e6c936b6a4f006639b1a1c099e96346c07c"
+source = "git+https://github.com/design-nexus/nyx-core.git?rev=52cba5e27a3dd5f00c780f53e423302b4b5f9c9c#52cba5e27a3dd5f00c780f53e423302b4b5f9c9c"
 dependencies = [
  "chrono",
-]
-
-[[package]]
-name = "num-traits"
-version = "0.2.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
-dependencies = [
- "autocfg",
 ]
 
 [[package]]

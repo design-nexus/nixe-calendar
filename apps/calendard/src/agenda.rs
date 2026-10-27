@@ -16,7 +16,7 @@
 //! local dates as YYYY-MM-DD.
 
 use chrono::Duration;
-use nixe_calendar_core::{CalendarInfo, Event, Span, midnight, timestamp};
+use nyx_calendar_core::{CalendarInfo, Event, Span, midnight, timestamp};
 use rusqlite::{Connection, params};
 use std::path::Path;
 
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn writes_events_and_skips_cancelled() {
-        let dir = std::env::temp_dir().join(format!("nixe-calendard-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("nyx-calendard-test-{}", std::process::id()));
         let path = dir.join("agenda.sqlite");
         let d = NaiveDate::from_ymd_opt(2026, 10, 22).unwrap();
         let calendars = vec![CalendarInfo {
