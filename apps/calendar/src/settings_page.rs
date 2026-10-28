@@ -53,11 +53,7 @@ fn window_group(page: &Page) {
         group.add(&row);
     }
     group.add(&theme_row);
-    let (row, _) = widgets::switch_row("Glow", "Soft accent glow around focused and selected elements.", prefs.glow, |on| {
-        prefs::update(|p| p.glow = on);
-        theme::apply();
-    });
-    group.add(&row);
+    group.add(&nyx_ui::widgets::accent_row("calendar"));
     let (row, _) = widgets::switch_row("Reduce motion", "Turn off transitions in this window.", prefs.reduce_motion, |on| {
         prefs::update(|p| p.reduce_motion = on);
         theme::apply();
@@ -267,6 +263,9 @@ fn accounts(page: &Page) {
         "Add, sign in to or remove Google, Nextcloud and other calendar accounts.",
         Some(open.upcast_ref()),
     ));
+    let import = widgets::icon_button("document-open-symbolic", "Import an .ics file (Ctrl+I)");
+    import.connect_clicked(|_| crate::actions::import_dialog());
+    group.add(&widgets::row("Import events", "Add the events in an .ics file to a calendar.", Some(import.upcast_ref())));
 }
 
 fn keyboard(page: &Page) {

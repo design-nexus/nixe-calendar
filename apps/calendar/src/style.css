@@ -178,3 +178,33 @@ button.destructive {
 .settings-option.nested-row {
   padding-left: 32px;
 }
+
+/* Nyx 2.0: the date navigation, the view switch and New event live in the
+   header; the sidebar has Find on top and the status at its foot. */
+.app-header .date-nav .toolbar-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-left: 6px;
+  margin-right: 12px;
+}
+
+window.calendar-window .app-header button.accent-action {
+  color: @theme_accent;
+}
+
+window.calendar-window .app-header button.accent-action:hover {
+  background: alpha(@theme_accent, 0.14);
+}
+
+.nav-top {
+  padding: 0 0 6px 0;
+}
+
+.nav-foot {
+  padding: 6px 4px 0 8px;
+}
+
+.nav-foot .status-readout {
+  color: @theme_dim_text;
+  font-size: 11.5px;
+}

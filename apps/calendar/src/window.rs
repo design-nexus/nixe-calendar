@@ -846,10 +846,11 @@ fn hooks() -> Rc<Hooks> {
     })
 }
 
-fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
-    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    bar.add_css_class("toolbar");
-    bar.add_css_class("list-toolbar");
+/// The header's date navigation (with the range's title), the view switch,
+/// New event, and Refresh (for the sidebar's foot).
+fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button, gtk::Button) {
+    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+    bar.add_css_class("date-nav");
     let prev = widgets::icon_button("go-previous-symbolic", "Previous (K)");
     prev.connect_clicked(|_| shift(-1));
     let today = widgets::icon_button("go-home-symbolic", "Today (T)");
@@ -871,23 +872,15 @@ fn toolbar() -> (gtk::Box, gtk::Label, gtk::Box, gtk::Button) {
         },
     );
     switcher.set_tooltip_text(Some("Day (D), Week (W), Month (M), Year (Y), Agenda (A)"));
-    let add = widgets::icon_button("list-add-symbolic", "New event (N)");
-    add.add_css_class("suggested-action");
+    let add = nyx_ui::widgets::bar_button("list-add-symbolic", "New event (N)");
+    add.add_css_class("accent-action");
     add.connect_clicked(|_| new_event());
     let reload = widgets::icon_button("view-refresh-symbolic", "Refresh (R)");
     reload.connect_clicked(|_| refresh());
-    for w in [
-        prev.upcast_ref::<gtk::Widget>(),
-        today.upcast_ref(),
-        next.upcast_ref(),
-        title.upcast_ref(),
-        switcher.upcast_ref(),
-        add.upcast_ref(),
-        reload.upcast_ref(),
-    ] {
+    for w in [prev.upcast_ref::<gtk::Widget>(), today.upcast_ref(), next.upcast_ref(), title.upcast_ref()] {
         bar.append(w);
     }
-    (bar, title, switcher, add)
+    (bar, title, switcher, add, reload)
 }
 
 fn build(app: &gtk::Application) {
@@ -918,15 +911,23 @@ fn build(app: &gtk::Application) {
         .vexpand(true)
         .child(&list)
         .build();
-    let head = chrome::sidebar_head("Calendar", Some("Find events (Ctrl+F)"));
-    head.toggle.connect_clicked(|_| toggle_sidebar());
-    nav.append(&head.root);
-    nav.append(&nav_scroll);
-
+    // The sidebar's top: finding events, and its toggle (centred on the narrow rail).
+    let nav_top = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    nav_top.add_css_class("nav-top");
     let search = gtk::SearchEntry::new();
-    search.set_placeholder_text(Some("Find events — Enter searches the whole year"));
+    search.set_placeholder_text(Some("Find events  (Ctrl+F)"));
+    search.set_tooltip_text(Some("Enter searches the whole year"));
     search.update_property(&[gtk::accessible::Property::Label("Find events")]);
-    search.set_visible(false);
+    search.add_css_class("sidebar-search");
+    search.add_css_class("compact-hide");
+    search.set_hexpand(true);
+    nav_top.append(&search);
+    let collapse = nyx_ui::widgets::bar_button("sidebar-show-symbolic", "Collapse the sidebar (Ctrl+B)");
+    collapse.add_css_class("nav-toggle");
+    collapse.connect_clicked(|_| toggle_sidebar());
+    nav_top.append(&collapse);
+    nav.append(&nav_top);
+    nav.append(&nav_scroll);
     search.connect_search_changed(|_| {
         if let Some(ui) = ui() {
             ui.borrow_mut().results = None;
@@ -935,26 +936,24 @@ fn build(app: &gtk::Application) {
         refresh_status();
     });
     search.connect_activate(|entry| search_year(entry.text().to_string()));
-    search.connect_stop_search(|entry| {
-        entry.set_text("");
-        entry.set_visible(false);
-    });
-    if let Some(find) = &head.search {
-        let entry = search.clone();
-        find.connect_clicked(move |_| {
-            if entry.is_visible() && entry.text().is_empty() {
-                entry.set_visible(false);
-            } else {
-                entry.set_visible(true);
-                entry.grab_focus();
-            }
-        });
-    }
+    search.connect_stop_search(|entry| entry.set_text(""));
 
     let banners = gtk::Box::new(gtk::Orientation::Vertical, 8);
     banners.add_css_class("banners");
     banners.set_visible(false);
-    let (bar, title, switcher, new_button) = toolbar();
+    let (date_nav, title, switcher, new_button, reload) = toolbar();
+
+    // The sidebar's foot: what's shown and whether it's current, and Refresh.
+    let nav_foot = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    nav_foot.add_css_class("nav-foot");
+    let readout = widgets::label("", "status-readout");
+    readout.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    readout.set_hexpand(true);
+    readout.add_css_class("compact-hide");
+    STATUS.with(|s| *s.borrow_mut() = Some(readout.clone()));
+    nav_foot.append(&readout);
+    nav_foot.append(&reload);
+    nav.append(&nav_foot);
 
     let hooks = hooks();
     let days = DaysView::new(hooks.clone());
@@ -982,9 +981,7 @@ fn build(app: &gtk::Application) {
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.add_css_class("settings-content");
     content.set_hexpand(true);
-    content.append(&chrome::search_strip(&search));
     content.append(&banners);
-    content.append(&bar);
     content.append(&pages);
 
     let body = gtk::Box::new(gtk::Orientation::Horizontal, 0);
@@ -992,10 +989,17 @@ fn build(app: &gtk::Application) {
     body.append(&nav);
     body.append(&content);
 
+    // The header: the app, where you are in time, the view, New event and Settings.
+    let header = nyx_ui::chrome::app_header(&window, "x-office-calendar-symbolic", "Calendar");
+    header.start.append(&date_nav);
+    header.center.append(&switcher);
+    header.end.append(&new_button);
+    header.end.append(&nyx_ui::chrome::settings_button(settings_dialog::open));
+
     let frame = gtk::Box::new(gtk::Orientation::Vertical, 0);
     frame.add_css_class("window-frame");
+    frame.append(&header.root);
     frame.append(&body);
-    frame.append(&status_bar());
 
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&frame));
@@ -1072,34 +1076,17 @@ fn build(app: &gtk::Application) {
     redraw();
 }
 
-fn status_bar() -> gtk::Box {
-    let bar = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-    bar.add_css_class("status-bar");
-    bar.append(&chrome::shortcuts_button(show_shortcuts));
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    bar.append(&spacer);
-    let readout = widgets::label("", "status-readout");
-    readout.set_ellipsize(gtk::pango::EllipsizeMode::Start);
-    STATUS.with(|s| *s.borrow_mut() = Some(readout.clone()));
-    bar.append(&readout);
-    bar.append(&chrome::status_action("document-open-symbolic", "Import an .ics file (Ctrl+I)", actions::import_dialog));
-    let gear = chrome::gear(settings_dialog::open);
-    gear.update_property(&[gtk::accessible::Property::Label("Settings")]);
-    bar.append(&gear);
-    bar
-}
-
 fn apply_compact(nav: &gtk::Box, compact: bool) {
-    if let Some(head) = nav.first_child().and_downcast::<gtk::Box>() {
-        chrome::set_head_compact(&head, compact);
-    }
     if compact {
         nav.add_css_class("compact");
     } else {
         nav.remove_css_class("compact");
     }
     fn walk(widget: &gtk::Widget, compact: bool) {
+        if widget.has_css_class("nav-toggle") {
+            widget.set_hexpand(compact);
+            widget.set_halign(if compact { gtk::Align::Center } else { gtk::Align::End });
+        }
         if widget.has_css_class("compact-hide") {
             widget.set_visible(!compact);
         }
@@ -1138,7 +1125,6 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
         if ctrl {
             match key {
                 gdk::Key::f => {
-                    search.set_visible(true);
                     search.grab_focus();
                 }
                 gdk::Key::b => toggle_sidebar(),
@@ -1163,12 +1149,10 @@ fn install_keys(window: &gtk::ApplicationWindow, search: &gtk::SearchEntry) {
             gdk::Key::n => new_event(),
             gdk::Key::r => refresh(),
             gdk::Key::slash => {
-                search.set_visible(true);
                 search.grab_focus();
             }
-            gdk::Key::Escape if search.is_visible() => {
+            gdk::Key::Escape if !search.text().is_empty() => {
                 search.set_text("");
-                search.set_visible(false);
             }
             gdk::Key::F1 => show_shortcuts(),
             _ => return glib::Propagation::Proceed,
