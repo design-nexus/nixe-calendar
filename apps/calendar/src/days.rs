@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 const GUTTER: f64 = 56.0;
 const HOUR: f64 = 48.0;
-const DAY_HEADER: f64 = 46.0;
+const DAY_HEADER: f64 = 52.0;
 const LANE: f64 = 22.0;
 
 type Hit = (f64, f64, f64, f64, usize);
@@ -163,7 +163,8 @@ impl DaysView {
 
     pub fn scroll_to_hour(&self, hour: u32) {
         let adj = self.scroll.vadjustment();
-        let target = hour as f64 * HOUR;
+        // A little above the hour, so its label is not cut in half.
+        let target = (hour as f64 * HOUR - 12.0).max(0.0);
         glib::idle_add_local_once(move || adj.set_value(target.min((adj.upper() - adj.page_size()).max(0.0))));
     }
 
@@ -183,30 +184,34 @@ fn draw_header(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d:
     let today = Local::now().date_naive();
     let single = d.days.len() == 1;
     d.header_hits.clear();
+    // One line per day, as in the mockup: "SUN 25", today's date on an accent square.
+    let name_style = Style { scale: 0.76, bold: true, ..draw::NORMAL };
+    let date_style = Style { scale: 1.24, bold: true, ..draw::NORMAL };
+    let today_style = Style { scale: 1.1, bold: true, ..draw::NORMAL };
+    let mid = DAY_HEADER / 2.0;
     for (i, day) in d.days.iter().enumerate() {
-        let x = GUTTER + i as f64 * col;
-        draw::set(cr, c.dim);
-        let name = if single { day.format("%A").to_string() } else { day.format("%a").to_string() };
-        draw::text(area, cr, &name.to_uppercase(), x + 8.0, 6.0, col - 12.0, Style { scale: 0.76, bold: true, ..draw::NORMAL });
-        if *day == today {
+        let x = GUTTER + i as f64 * col + 10.0;
+        let is_today = *day == today;
+        let name = if single { day.format("%A") } else { day.format("%a") }.to_string().to_uppercase();
+        let (name_w, name_h) = draw::text_size(area, &name, name_style);
+        draw::set(cr, if is_today { c.accent } else { c.dim.mix(c.bg, 0.3) });
+        draw::text(area, cr, &name, x, mid - name_h / 2.0, col - 20.0, name_style);
+        let date = day.day().to_string();
+        let dx = x + name_w + 8.0;
+        if is_today {
+            let (w, h) = draw::text_size(area, &date, today_style);
             draw::set(cr, c.accent);
-            draw::rounded(cr, x + 5.0, 22.0, 30.0, 20.0, 6.0);
+            draw::rounded(cr, dx, mid - 16.0, 32.0, 32.0, 9.0);
             let _ = cr.fill();
             draw::set(cr, c.on_accent);
+            draw::text(area, cr, &date, dx + (32.0 - w) / 2.0, mid - h / 2.0, 32.0, today_style);
         } else {
+            let (_, h) = draw::text_size(area, &date, date_style);
             draw::set(cr, c.text);
+            draw::text(area, cr, &date, dx, mid - h / 2.0, (col - 20.0 - name_w - 8.0).max(1.0), date_style);
         }
-        draw::text(area, cr, &day.day().to_string(), x + 9.0, 23.0, 26.0, Style { bold: true, ..draw::NORMAL });
     }
-    let height = area.content_height() as f64;
-    draw::set(cr, c.line);
-    cr.set_line_width(1.0);
-    for i in 0..=d.days.len() {
-        let x = (GUTTER + i as f64 * col).floor() + 0.5;
-        cr.move_to(x, DAY_HEADER);
-        cr.line_to(x, height);
-    }
-    let _ = cr.stroke();
+    // No column lines: the days are told apart by their headings, as in the mockup.
     draw::set(cr, c.dim);
     draw::text(area, cr, "all day", 6.0, DAY_HEADER + 4.0, GUTTER - 10.0, Style { scale: 0.72, ..draw::NORMAL });
 
@@ -217,18 +222,16 @@ fn draw_header(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d:
         let w = (bar.last_day - bar.first_day + 1) as f64 * col - 6.0;
         let y = DAY_HEADER + bar.lane as f64 * LANE + 2.0;
         let h = LANE - 4.0;
-        draw::set(cr, c.bg.mix(color, if event.cancelled { 0.14 } else { 0.32 }));
-        draw::rounded(cr, x, y, w, h, 4.0);
-        let _ = cr.fill();
-        draw::set(cr, c.text);
+        let (title, _) = draw::event_block(cr, &c, color, event.cancelled, x, y, w, h, 5.0);
+        draw::set(cr, title);
         draw::text(
             area,
             cr,
             &event.title,
-            x + 6.0,
+            x + 7.0,
             y + 1.0,
-            w - 10.0,
-            Style { scale: 0.86, strike: event.cancelled, ..draw::NORMAL },
+            w - 12.0,
+            Style { scale: 0.84, bold: true, strike: event.cancelled, ..draw::NORMAL },
         );
         d.header_hits.push((x, y, w, h, bar.event));
     }
@@ -245,11 +248,11 @@ fn draw_grid(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d: &
         cr.rectangle(GUTTER + i as f64 * col, 0.0, col, 24.0 * HOUR);
         let _ = cr.fill();
     }
-    cr.set_line_width(1.0);
     for h in 0..24 {
         let y = h as f64 * HOUR;
-        draw::set(cr, c.line);
-        cr.move_to(GUTTER - 6.0, y.floor() + 0.5);
+        // A faint hour line across the days; no column lines.
+        draw::grid_line(cr, &c);
+        cr.move_to(GUTTER, y.floor() + 0.5);
         cr.line_to(width, y.floor() + 0.5);
         let _ = cr.stroke();
         if h > 0 {
@@ -257,50 +260,39 @@ fn draw_grid(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, d: &
             draw::text(area, cr, &draw::hour_label(h), 4.0, y - 8.0, GUTTER - 14.0, Style { scale: 0.76, ..draw::NORMAL });
         }
     }
-    draw::set(cr, c.line);
-    for i in 0..=d.days.len() {
-        let x = (GUTTER + i as f64 * col).floor() + 0.5;
-        cr.move_to(x, 0.0);
-        cr.line_to(x, 24.0 * HOUR);
-    }
-    let _ = cr.stroke();
-
     d.grid_hits.clear();
     for p in d.layout.timed.clone() {
         let event = &d.events[p.event];
         let color = draw::event_color(&d.calendars, event, c.accent);
         let slot = col / p.columns as f64;
-        let x = GUTTER + p.day as f64 * col + p.column as f64 * slot + 2.0;
-        let w = slot - 4.0;
+        let x = GUTTER + p.day as f64 * col + p.column as f64 * slot + 3.0;
+        let w = slot - 7.0;
         let y = p.top as f64 / 60.0 * HOUR + 1.0;
         let h = (p.bottom - p.top) as f64 / 60.0 * HOUR - 2.0;
-        draw::set(cr, c.bg.mix(color, if event.cancelled { 0.12 } else { 0.26 }));
-        draw::rounded(cr, x, y, w, h, 4.0);
-        let _ = cr.fill();
-        draw::set(cr, color);
-        cr.rectangle(x, y + 1.0, 3.0, (h - 2.0).max(1.0));
-        let _ = cr.fill();
+        let (title, detail_color) = draw::event_block(cr, &c, color, event.cancelled, x, y, w, h, 7.0);
         cr.save().ok();
         cr.rectangle(x, y, w, h);
         cr.clip();
-        draw::set(cr, c.text);
+        draw::set(cr, title);
+        // Short events keep their title centred in the block.
+        let top = if h < 24.0 { y + (h - 16.0).max(0.0) / 2.0 } else { y + 4.0 };
         let used = draw::text(
             area,
             cr,
             &event.title,
             x + 8.0,
-            y + 2.0,
-            w - 12.0,
-            Style { scale: 0.86, bold: true, strike: event.cancelled, ..draw::NORMAL },
+            top,
+            w - 14.0,
+            Style { scale: 0.84, bold: true, strike: event.cancelled, ..draw::NORMAL },
         );
-        if h > used + 14.0 {
-            draw::set(cr, c.dim);
+        if h > used + 18.0 {
+            draw::set(cr, detail_color);
             let when = match event.span {
                 Span::Timed { start, end } => draw::time_range(start, end),
                 Span::AllDay { .. } => String::new(),
             };
             let detail = if event.location.is_empty() { when } else { format!("{when} · {}", event.location) };
-            draw::text(area, cr, &detail, x + 8.0, y + 2.0 + used, w - 12.0, Style { scale: 0.76, ..draw::NORMAL });
+            draw::text(area, cr, &detail, x + 8.0, top + used, w - 14.0, Style { scale: 0.78, ..draw::NORMAL });
         }
         cr.restore().ok();
         d.grid_hits.push((x, y, w, h, p.event));

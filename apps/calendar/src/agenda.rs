@@ -79,10 +79,11 @@ impl AgendaView {
         dot.set_content_width(10);
         dot.set_content_height(10);
         dot.set_valign(gtk::Align::Center);
+        // The calendar's colour as a small rounded swatch, like the sidebar's checkboxes.
         dot.set_draw_func(move |_, cr, _, _| {
             let c = color.as_deref().map(Rgb::hex).unwrap_or_else(|| Rgb::hex(&nyx_theme::palette().accent));
             draw::set(cr, c);
-            cr.arc(5.0, 5.0, 4.5, 0.0, std::f64::consts::TAU);
+            draw::rounded(cr, 0.5, 0.5, 9.0, 9.0, 3.0);
             let _ = cr.fill();
         });
         content.append(&dot);

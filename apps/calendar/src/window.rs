@@ -643,23 +643,36 @@ fn nav_button(icon: &str, title: &str, tooltip: &str) -> gtk::Button {
     button
 }
 
-/// A calendar's color: a filled square when shown, an outline when hidden.
+/// A calendar's checkbox in its colour: filled with a check when shown, an outline when
+/// hidden. Rounded, like the 2.0 mockup's.
 fn swatch(color: Option<&str>, shown: bool) -> gtk::DrawingArea {
+    const SIZE: f64 = 15.0;
     let area = gtk::DrawingArea::new();
-    area.set_content_width(16);
-    area.set_content_height(16);
+    area.set_content_width(18);
+    area.set_content_height(18);
     area.set_valign(gtk::Align::Center);
     let color = color.map(Rgb::hex);
     area.set_draw_func(move |_, cr, w, h| {
         let c = color.unwrap_or_else(|| Rgb::hex(&nyx_theme::palette().accent));
+        let (x, y) = ((w as f64 - SIZE) / 2.0, (h as f64 - SIZE) / 2.0);
         cr.set_source_rgb(c.0, c.1, c.2);
-        let (x, y, s) = (w as f64 / 2.0 - 6.0, h as f64 / 2.0 - 6.0, 12.0);
         if shown {
-            cr.rectangle(x, y, s, s);
+            crate::draw::rounded(cr, x, y, SIZE, SIZE, 4.5);
             let _ = cr.fill();
+            // The check: dark on light colours, white on the rest.
+            let light = 0.2126 * c.0 + 0.7152 * c.1 + 0.0722 * c.2 > 0.62;
+            let on = if light { 0.08 } else { 1.0 };
+            cr.set_source_rgba(on, on, on, 0.95);
+            cr.set_line_width(1.7);
+            cr.set_line_cap(gtk::cairo::LineCap::Round);
+            cr.set_line_join(gtk::cairo::LineJoin::Round);
+            cr.move_to(x + SIZE * 0.26, y + SIZE * 0.52);
+            cr.line_to(x + SIZE * 0.44, y + SIZE * 0.70);
+            cr.line_to(x + SIZE * 0.76, y + SIZE * 0.32);
+            let _ = cr.stroke();
         } else {
             cr.set_line_width(1.5);
-            cr.rectangle(x + 0.75, y + 0.75, s - 1.5, s - 1.5);
+            crate::draw::rounded(cr, x + 0.75, y + 0.75, SIZE - 1.5, SIZE - 1.5, 4.0);
             let _ = cr.stroke();
         }
     });

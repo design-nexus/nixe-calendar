@@ -140,8 +140,8 @@ fn draw_month(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, hei
             draw::text(area, cr, &name, i as f64 * cw + 10.0, 7.0, cw - 14.0, Style { scale: 0.76, bold: true, ..draw::NORMAL });
         }
     }
-    draw::set(cr, c.line);
-    cr.set_line_width(1.0);
+    // Faint lines: cells still read as a grid, without bright rules.
+    draw::grid_line(cr, &c);
     cr.move_to(0.0, WEEKDAY_ROW - 0.5);
     cr.line_to(width, WEEKDAY_ROW - 0.5);
     for r in 1..rows {
@@ -200,18 +200,16 @@ fn draw_month(area: &gtk::DrawingArea, cr: &gtk::cairo::Context, width: f64, hei
             let h = BAR - 3.0;
             let spans_days = event.days().0 != event.days().1 || event.all_day();
             if spans_days {
-                draw::set(cr, c.bg.mix(color, if event.cancelled { 0.14 } else { 0.32 }));
-                draw::rounded(cr, x, y, w, h, 4.0);
-                let _ = cr.fill();
-                draw::set(cr, c.text);
+                let (title, _) = draw::event_block(cr, &c, color, event.cancelled, x, y, w, h, 5.0);
+                draw::set(cr, title);
                 draw::text(
                     area,
                     cr,
                     &event.title,
-                    x + 6.0,
+                    x + 7.0,
                     y + 1.0,
-                    w - 10.0,
-                    Style { scale: 0.84, strike: event.cancelled, ..draw::NORMAL },
+                    w - 12.0,
+                    Style { scale: 0.82, bold: true, strike: event.cancelled, ..draw::NORMAL },
                 );
             } else {
                 draw::set(cr, color);

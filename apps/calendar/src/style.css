@@ -86,6 +86,12 @@ button.agenda-row {
   border-bottom: 1px solid @divider;
 }
 
+/* Above the shared button padding, so a row has room around its two lines. */
+window.calendar-window button.agenda-row {
+  padding: 10px 16px;
+  min-height: 0;
+}
+
 button.agenda-row:last-child {
   border-bottom: none;
 }
@@ -94,13 +100,25 @@ button.agenda-row:hover {
   background: @row_hover;
 }
 
+/* The row is a button, whose labels would take its weight: set each one. */
+button.agenda-row label {
+  font-weight: 400;
+}
+
 .agenda-time {
   color: @theme_dim_text;
   font-size: 0.9em;
+  font-feature-settings: "tnum";
 }
 
-.agenda-title {
-  font-weight: 600;
+button.agenda-row .agenda-title {
+  font-weight: 500;
+  color: @theme_text;
+}
+
+button.agenda-row .dim {
+  font-size: 0.9em;
+  color: @theme_dim_text;
 }
 
 .cancelled {

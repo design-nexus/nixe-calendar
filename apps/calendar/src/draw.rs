@@ -43,7 +43,6 @@ pub struct Colors {
     pub dim: Rgb,
     pub accent: Rgb,
     pub on_accent: Rgb,
-    pub line: Rgb,
 }
 
 pub fn colors() -> Colors {
@@ -55,7 +54,6 @@ pub fn colors() -> Colors {
         dim: Rgb::hex(&p.dim_text),
         accent: Rgb::hex(&p.accent),
         on_accent: if p.light { Rgb(1.0, 1.0, 1.0) } else { bg },
-        line: bg.mix(Rgb::hex(&p.border), 0.82),
     }
 }
 
@@ -91,6 +89,24 @@ pub const NORMAL: Style = Style { scale: 1.0, bold: false, strike: false, center
 
 /// Draws ellipsized text in a box of width `w`; returns its height.
 pub fn text(area: &impl IsA<gtk::Widget>, cr: &gtk::cairo::Context, s: &str, x: f64, y: f64, w: f64, style: Style) -> f64 {
+    let layout = layout(area, s, style);
+    layout.set_width((w.max(1.0) * gtk::pango::SCALE as f64) as i32);
+    layout.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    if style.center {
+        layout.set_alignment(gtk::pango::Alignment::Center);
+    }
+    cr.move_to(x, y);
+    pangocairo::functions::show_layout(cr, &layout);
+    layout.pixel_size().1 as f64
+}
+
+/// The width and height `text` would take without a width limit.
+pub fn text_size(area: &impl IsA<gtk::Widget>, s: &str, style: Style) -> (f64, f64) {
+    let (w, h) = layout(area, s, style).pixel_size();
+    (w as f64, h as f64)
+}
+
+fn layout(area: &impl IsA<gtk::Widget>, s: &str, style: Style) -> gtk::pango::Layout {
     let layout = area.create_pango_layout(Some(s));
     let attrs = gtk::pango::AttrList::new();
     attrs.insert(gtk::pango::AttrFloat::new_scale(if style.scale == 0.0 { 1.0 } else { style.scale }));
@@ -101,14 +117,7 @@ pub fn text(area: &impl IsA<gtk::Widget>, cr: &gtk::cairo::Context, s: &str, x: 
         attrs.insert(gtk::pango::AttrInt::new_strikethrough(true));
     }
     layout.set_attributes(Some(&attrs));
-    layout.set_width((w.max(1.0) * gtk::pango::SCALE as f64) as i32);
-    layout.set_ellipsize(gtk::pango::EllipsizeMode::End);
-    if style.center {
-        layout.set_alignment(gtk::pango::Alignment::Center);
-    }
-    cr.move_to(x, y);
-    pangocairo::functions::show_layout(cr, &layout);
-    layout.pixel_size().1 as f64
+    layout
 }
 
 /// Draws one ellipsized line of Pango markup.
@@ -135,6 +144,28 @@ pub fn markup(
     layout.set_ellipsize(gtk::pango::EllipsizeMode::End);
     cr.move_to(x, y);
     pangocairo::functions::show_layout(cr, &layout);
+}
+
+/// An event as Nyx 2.0 draws it: the calendar's colour at a fifth over the background,
+/// a faint inner edge in the colour, rounded corners. Returns the colours for its text:
+/// the title tinted toward the calendar's colour, and the time a little quieter.
+#[allow(clippy::too_many_arguments)]
+pub fn event_block(cr: &gtk::cairo::Context, c: &Colors, color: Rgb, cancelled: bool, x: f64, y: f64, w: f64, h: f64, r: f64) -> (Rgb, Rgb) {
+    set(cr, c.bg.mix(color, if cancelled { 0.08 } else { 0.20 }));
+    rounded(cr, x, y, w, h, r);
+    let _ = cr.fill();
+    set_a(cr, color, if cancelled { 0.16 } else { 0.28 });
+    cr.set_line_width(1.0);
+    rounded(cr, x + 0.5, y + 0.5, w - 1.0, h - 1.0, (r - 0.5).max(0.0));
+    let _ = cr.stroke();
+    let title = if cancelled { c.dim } else { c.text.mix(color, 0.45) };
+    (title, title.mix(c.bg, 0.18))
+}
+
+/// The grid's lines: the text colour, barely there.
+pub fn grid_line(cr: &gtk::cairo::Context, c: &Colors) {
+    set_a(cr, c.text, 0.04);
+    cr.set_line_width(1.0);
 }
 
 pub fn event_color(calendars: &Calendars, event: &Event, fallback: Rgb) -> Rgb {
