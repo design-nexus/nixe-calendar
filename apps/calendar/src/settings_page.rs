@@ -1,68 +1,29 @@
 //! The settings card's groups.
 
 use crate::prefs;
-use crate::theme;
 use crate::widgets::{self, Page};
 use crate::window;
 use crate::{editor, worker};
 use gtk::prelude::*;
 
 pub fn build(page: &Page) {
-    window_group(page);
     week(page);
     new_events(page);
     working(page);
     calendars(page);
     sets(page);
     accounts(page);
-    keyboard(page);
 }
 
-fn window_group(page: &Page) {
-    let group = page.group("Calendar window");
+fn week(page: &Page) {
+    let group = page.group("Week");
     group.add(&widgets::segmented_row(
-        "Open on",
+        "Starting view",
         "The view Calendar opens on.",
         widgets::opts(&[("day", "Day"), ("week", "Week"), ("month", "Month"), ("year", "Year"), ("agenda", "Agenda")]),
         &prefs::get().open_view,
         |view| prefs::update(|p| p.open_view = view),
     ));
-    let prefs = prefs::get();
-    let options: Vec<(String, String)> = theme::all().iter().map(|t| (t.id.clone(), t.name.clone())).collect();
-    let (theme_row, theme_dd) =
-        widgets::choice_row("Theme", "A bundled theme, or one of your own.", options, &prefs.theme, |id| {
-            prefs::update(|p| {
-                p.theme = id;
-                p.mode = prefs::ThemeMode::Theme;
-            });
-            theme::apply();
-        });
-    theme_dd.set_sensitive(prefs.mode == prefs::ThemeMode::Theme || !theme::omarchy_available());
-    if theme::omarchy_available() {
-        let dd = theme_dd.clone();
-        let (row, _) = widgets::switch_row(
-            "Follow Omarchy theme",
-            "Match the desktop's colors and update when the Omarchy theme changes.",
-            prefs.mode == prefs::ThemeMode::Omarchy,
-            move |on| {
-                prefs::update(|p| p.mode = if on { prefs::ThemeMode::Omarchy } else { prefs::ThemeMode::Theme });
-                dd.set_sensitive(!on);
-                theme::apply();
-            },
-        );
-        group.add(&row);
-    }
-    group.add(&theme_row);
-    group.add(&nyx_ui::widgets::accent_row("calendar"));
-    let (row, _) = widgets::switch_row("Reduce motion", "Turn off transitions in this window.", prefs.reduce_motion, |on| {
-        prefs::update(|p| p.reduce_motion = on);
-        theme::apply();
-    });
-    group.add(&row);
-}
-
-fn week(page: &Page) {
-    let group = page.group("Week");
     let prefs = prefs::get();
     group.add(&widgets::segmented_row(
         "First day of the week",
@@ -266,11 +227,4 @@ fn accounts(page: &Page) {
     let import = widgets::icon_button("document-open-symbolic", "Import an .ics file (Ctrl+I)");
     import.connect_clicked(|_| crate::actions::import_dialog());
     group.add(&widgets::row("Import events", "Add the events in an .ics file to a calendar.", Some(import.upcast_ref())));
-}
-
-fn keyboard(page: &Page) {
-    let group = page.group("Keyboard");
-    for (keys, what) in window::SHORTCUTS {
-        group.add(&widgets::row(what, "", Some(widgets::key_caps(keys).upcast_ref())));
-    }
 }
