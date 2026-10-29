@@ -9,6 +9,11 @@ use gtk::prelude::*;
 pub fn build(page: &Page) {
     week(page);
     new_events(page);
+    let group = page.group("Alerts");
+    let (row, _) = widgets::choice_row("Snooze length", "How long Snooze postpones an event notification.",
+        widgets::opts(&[("5", "5 minutes"), ("10", "10 minutes"), ("15", "15 minutes"), ("30", "30 minutes")]),
+        &prefs::get().snooze_minutes.to_string(), |id| { prefs::update(|p| p.snooze_minutes = id.parse().unwrap_or(10)); prefs::flush(); });
+    group.add(&row);
     working(page);
     calendars(page);
     sets(page);
@@ -25,6 +30,10 @@ fn week(page: &Page) {
         |view| prefs::update(|p| p.open_view = view),
     ));
     let prefs = prefs::get();
+    let (row, _) = widgets::choice_row("Agenda shows", "How far ahead to show events in Agenda.",
+        widgets::opts(&[("7", "7 days"), ("14", "14 days"), ("30", "30 days"), ("60", "60 days")]),
+        &prefs.agenda_days.to_string(), |id| { prefs::update(|p| p.agenda_days = id.parse().unwrap_or(30)); window::go_to_today(); });
+    group.add(&row);
     group.add(&widgets::segmented_row(
         "First day of the week",
         "The day each week starts on.",

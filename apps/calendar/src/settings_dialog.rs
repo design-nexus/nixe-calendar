@@ -10,6 +10,7 @@ pub use nyx_ui::settings_card::fit;
 
 const GROUPS: &[(&str, &str, &str)] = &[
     ("Week", "x-office-calendar-symbolic", "Starting view, first day, scroll position"),
+    ("Alerts", "alarm-symbolic", "Snooze length"),
     ("New events", "list-add-symbolic", "Calendar, length, alert"),
     ("Working hours", "appointment-soon-symbolic", "Days and hours, reminders in the views"),
     ("Calendars", "view-calendar-symbolic", "Turn calendars and accounts on or off"),

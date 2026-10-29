@@ -86,7 +86,6 @@ impl ViewKind {
     }
 }
 
-const AGENDA_DAYS: i64 = 30;
 const SEARCH_DAYS: i64 = 365;
 
 struct Ui {
@@ -351,7 +350,7 @@ fn show_view() {
             u.pages.set_visible_child_name("year");
         }
         ViewKind::Agenda => {
-            u.agenda.set(u.range.0, (u.range.1 - u.range.0).num_days(), &events, &calendars, "Nothing in the next 30 days");
+            u.agenda.set(u.range.0, (u.range.1 - u.range.0).num_days(), &events, &calendars, &format!("Nothing in the next {} days", prefs::get().agenda_days.clamp(7, 60)));
             u.pages.set_visible_child_name("agenda");
         }
     }
@@ -418,7 +417,7 @@ fn range_for(view: ViewKind, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
             let last = rows.last().map(|r| r[6]).unwrap_or(anchor);
             (first, last + Duration::days(1))
         }
-        ViewKind::Agenda => (anchor, anchor + Duration::days(AGENDA_DAYS)),
+        ViewKind::Agenda => (anchor, anchor + Duration::days(prefs::get().agenda_days.clamp(7, 60))),
         ViewKind::Year => {
             let first = NaiveDate::from_ymd_opt(anchor.year(), 1, 1).unwrap_or(anchor);
             (first, NaiveDate::from_ymd_opt(anchor.year() + 1, 1, 1).unwrap_or(anchor))

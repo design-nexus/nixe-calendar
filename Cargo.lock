@@ -662,6 +662,7 @@ dependencies = [
  "nyx-core",
  "nyx-eds",
  "rusqlite",
+ "toml",
 ]
 
 [[package]]

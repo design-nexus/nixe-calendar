@@ -104,7 +104,7 @@ impl Notifier {
         } else {
             actions.extend(["open".to_string(), "Open".to_string()]);
         }
-        actions.extend(["snooze", "Snooze 10 min", "dismiss", "Dismiss"].iter().map(|s| s.to_string()));
+        actions.extend(["snooze", &format!("Snooze {} min", crate::snooze_minutes()), "dismiss", "Dismiss"].iter().map(|s| s.to_string()));
         let mut hints: HashMap<String, glib::Variant> = HashMap::new();
         hints.insert("desktop-entry".into(), ICON.to_variant());
         hints.insert("urgency".into(), 1u8.to_variant());
